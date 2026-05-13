@@ -212,7 +212,7 @@ This mode reads the existing codebase and generates the full documentation basel
      - File content requirement → `file_contains`
    - Include all universal checks: `manifest_drift`, `mermaid_br_tags`, `inline_comments`
 
-3. **Install the plugin** (preferred) or clone the hitl-claude-plugin repo and load it as a Claude Code plugin:
+3. **Install the plugin** (preferred) or clone the hitl-plugin repo and load it as a Claude Code plugin:
 
 
    - Key skills: `skills/dev-practices/SKILL.md` — the 31-step workflow; `skills/apply-change/SKILL.md` — impact analysis
