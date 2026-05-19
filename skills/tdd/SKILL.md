@@ -79,33 +79,91 @@ Update `.hitl/current-change.yaml`: set `current_step: {number: 10, name: "AI ge
    ```
    Fall back to reading `docs/03-engineering/testing/strategy.md` if the graph is unavailable or returns nothing specific.
 
-6. **Generate tests targeting ≥90% line coverage** from the LLD + manifest, filling gaps not already covered. The 90% threshold is a hard gate — it is checked in Phase 6 and blocks GREEN completion if not met. Structure the suite to cover:
-   - Happy path tests for every method in the LLD
-   - Error path tests for every `error_modes` entry in the facade
-   - Precondition tests for every `preconditions` entry — including what happens when the precondition is violated
+Generate three categories of tests. All are written now (RED phase), but they run at different points:
+
+**A. Unit tests** — written and run in this TDD cycle. Target ≥90% line coverage (hard gate at Phase 6).
+   - Happy path for every method in the LLD
+   - Error path for every `error_modes` entry in the facade
+   - Precondition violation for every `preconditions` entry
    - Every `if`/`else` branch and early-return path in the LLD's described logic
-   - Boundary entity shape tests (verify the entity matches the manifest shape)
-   - Contract tests from facade APIs (verify the domain's promises to other domains)
-   - Convention tests (e.g., if `idempotency-keys` convention applies, test that the tool rejects missing keys)
+   - Boundary entity shape tests (verify entity matches the manifest shape)
+   - Convention tests (e.g., if `idempotency-keys` applies, test key rejection)
    - Regression tests for every incident found in step 4
+   - Before presenting: count methods × (happy path + each error mode + each precondition violation). Fewer than 3 tests per public method on average means branch gaps — add more.
 
-   Before presenting tests, count: methods in LLD × (happy path + each error mode + each precondition violation). If this count is fewer than 3 tests per public method on average, you likely have branch gaps — add more.
+**B. Integration tests** — written now, run at Phase 6 GREEN (real service calls, no mocks for the domain under test).
+   - One integration test per `facade_api` entry in the manifest for this domain
+   - Tests make real calls to the service (use a test database/sandbox, not mocks)
+   - Verify the contract each facade API promises to other domains
+   - Verify cross-domain boundary entities have the correct shape at the wire level
+   - Mark with `@pytest.mark.integration` / `describe('integration', ...)` so they can be run separately
 
-7. **Register each new test** in `docs/03-engineering/testing/test-registry.yaml` using the schema from `shared/templates/test-registry-template.yaml`. Required fields: `id`, `name`, `domain`, `risk`, `type`, `origin` (set to `tdd`), `file`. For incident regression tests, also set `incident_ref`.
+**C. Playwright E2E tests** — written now as stubs (`test.skip`), unskipped by QA at Step 22.
+   Write one Playwright test file per PRD acceptance criterion for this feature. Each test:
+   - Simulates a real user in a browser — no direct API calls, no mocks
+   - Runs against both desktop Chrome and a mobile device (`devices['iPhone 15']` and `devices['Pixel 7']`)
+   - Follows the user journey end-to-end: navigate → interact → assert visible outcome
+   - Is marked `test.skip('pending environment', ...)` so it does not break RED phase
+   - Lives in `tests/e2e/features/<feature-name>.spec.ts`
 
-5. **Present all generated tests** to the user. Do NOT proceed to Phase 2 until the user reviews.
+   File structure:
+   ```typescript
+   import { test, devices } from '@playwright/test';
+   const iphone = devices['iPhone 15'];
+   const android = devices['Pixel 7'];
 
-6. **STOP and present a specific review checklist:**
+   test.skip('pending environment');
+
+   test.describe('<feature-name>', () => {
+     test.use({ ...iphone }); // repeat block with android
+     test('<AC description — desktop>', async ({ page }) => { /* ... */ });
+   });
+   ```
+
+   > **Note on native mobile apps:** Playwright covers web browsers and mobile web (responsive/PWA). If the feature includes a native iOS or Android app, those require Appium or Detox — flag that in the test plan.
+
+**D. Smoke suite contribution** — add this feature's happy-path user journey to `tests/e2e/smoke/journeys/<feature-name>.spec.ts`. The smoke suite runs a fresh new-customer flow on every build.
+
+   Structure:
+   ```
+   tests/e2e/smoke/
+     setup.ts          ← creates a brand-new test customer (signup → onboard)
+     teardown.ts       ← deletes test customer and all associated data
+     journeys/
+       <existing>.spec.ts
+       <feature-name>.spec.ts   ← ADD THIS for the current feature
+   ```
+
+   The journey file must:
+   - Assume a fresh customer created in `setup.ts` — no pre-existing data
+   - Exercise the feature's primary user action end-to-end via browser
+   - Assert the visible outcome the PM would verify
+   - Run on desktop Chrome + `devices['iPhone 15']` + `devices['Pixel 7']`
+   - NOT be skipped — smoke suite always runs
+
+   If `tests/e2e/smoke/setup.ts` does not exist yet, create it now. It must:
+   - Hit the app's signup flow via Playwright (real browser, not API)
+   - Complete onboarding
+   - Store the created customer's credentials in a fixture file for the journey tests to consume
+   - Be idempotent (safe to run repeatedly; tears down previous test customer first)
+
+7. **Register each new test** in `docs/03-engineering/testing/test-registry.yaml`. Required fields: `id`, `name`, `domain`, `risk`, `type` (`unit` / `integration` / `e2e` / `smoke`), `origin` (`tdd`), `file`. For incident regression tests, also set `incident_ref`.
+
+8. **Present all generated tests** to the user. Do NOT proceed to Phase 2 until the user reviews.
+
+9. **STOP and present a specific review checklist:**
 
    > **Tests need your review before I write any code. Work through this list:**
    >
-   > 1. **Coverage gaps** — I generated tests from the LLD. What domain knowledge or business rules do you know that aren't in the LLD? Add tests for those now.
-   > 2. **Incident registry** — Check for past failures in this domain (graph query preferred: `/graphify query "past incidents affecting domain: <domain-name>"`, or read `docs/04-operations/incident-registry.yaml` directly). Are any of those failure modes missing from the tests above?
-   > 3. **Security edge cases** — Is there a test for: unauthenticated access rejected? User A cannot access User B's data? Input at max length / empty / null?
-   > 4. **Realistic failure modes** — What's the most likely way this breaks in production that I haven't tested? (network timeout? partial write? concurrent requests?)
-   > 5. **Test quality** — Read 3 random tests from the list. Does the assertion actually verify the behavior described in the test name? If not, those tests need to be rewritten.
+   > 1. **Unit coverage gaps** — I generated unit tests from the LLD. What domain knowledge or business rules aren't in the LLD? Add tests for those now.
+   > 2. **Integration contracts** — Does each facade API have an integration test that makes a real call? Are the contract assertions specific (exact field names, error codes)?
+   > 3. **E2E journeys** — Does each Playwright test follow what a real user would do? Are the assertions on visible UI outcomes, not internal state?
+   > 4. **Smoke suite** — Does the new journey in the smoke suite represent what the PM would demo? Does it start from a brand-new customer with no prior data?
+   > 5. **Incident registry** — Are past failure modes in this domain covered by a regression test?
+   > 6. **Security edge cases** — Unauthenticated access rejected? User A cannot access User B's data? Input at max/empty/null?
+   > 7. **Mobile coverage** — Are the Playwright tests running against both `iPhone 15` and `Pixel 7` device profiles?
    >
-   > Remove any tests that only verify implementation details (mock called once, internal method invoked). Those tests will break on every refactor without catching real bugs.
+   > Remove tests that only verify implementation details (mock called once, internal method invoked).
    >
    > When you're satisfied, say **"tests approved"** to proceed.
 
@@ -186,7 +244,20 @@ Update `.hitl/current-change.yaml`: set `current_step: {number: 14, name: "Gener
 
    **If coverage ≥ 90%:**
    - Record the coverage percentage in `.hitl/current-change.yaml` under `required_evidence.coverage_pct`.
-   - Proceed to Phase 7.
+
+5. **Run integration tests** (now that the implementation exists):
+   ```bash
+   pytest -m integration   # Python
+   jest --testPathPattern=integration   # JS/TS
+   ```
+   All integration tests must pass. If any fail:
+   - Diagnose: is it a contract mismatch (implementation disagrees with the facade spec) or a test environment issue?
+   - Fix the implementation or the test environment. Do not remove or skip failing integration tests.
+   - Re-run until all pass, then proceed to Phase 7.
+
+   Record result in `.hitl/current-change.yaml` under `required_evidence.integration_tests_pass: true`.
+
+   E2E Playwright tests remain `test.skip` — they run at QA verify (Step 22), not here. Do not unskip them now.
 
 ---
 
