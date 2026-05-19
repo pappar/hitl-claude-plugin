@@ -28,7 +28,8 @@ echo ""
 # Source layout: ai/claude/<skill-name>/SKILL.md
 # Plugin layout: skills/<skill-name>/SKILL.md
 echo "Syncing skills..."
-find "$SOURCE_DIR/ai/claude" -name "SKILL.md" | while read -r src; do
+find "$SOURCE_DIR/ai/claude" \( -name "SKILL.md" -o -name "*.md" \) \
+  ! -path "*/agents/*" ! -path "*/commands/*" | while read -r src; do
   rel="${src#$SOURCE_DIR/ai/claude/}"        # e.g. tdd/SKILL.md or qa/plan-tests/SKILL.md
   dest="$PLUGIN_DIR/skills/$rel"
   mkdir -p "$(dirname "$dest")"
