@@ -13,7 +13,15 @@ Orchestrate the Red → Green → Refactor cycle where tests drive the design be
 
 If `$ARGUMENTS` is empty, ask: "What are you implementing? Point me to the LLD or issue."
 
-**Refusal rule:** If no LLD path is provided or found, stop: "No LLD found. Write the LLD first using `/generate-docs` — this skill generates tests FROM the spec, not without one."
+**Refusal rule — no LLD:** If no LLD path is provided or found, stop: "No LLD found. Write the LLD first using `/generate-docs` — this skill generates tests FROM the spec, not without one."
+
+**Refusal rule — no decision packet:** Before generating any tests, check `.hitl/current-change.yaml` for `source_artifacts.decision_packet`. If the field is missing or the file at that path does not exist on disk, stop:
+
+> No decision packet found for this change.
+>
+> Decision packets are created at the end of `/architect:design-feature` (Phase 10 — Step 9). They prove the change has an approved LLD, a test plan, and a scoped domain before code generation begins.
+>
+> Run `/architect:design-feature` first. Once the architect approves the packet, resume here.
 
 ---
 

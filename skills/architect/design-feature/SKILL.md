@@ -388,34 +388,74 @@ If no: state the reason explicitly (e.g., "No training plan required — this ex
 
 ## Phase 10 — Decision Packet Assembly (Step 9)
 
-For each confirmed slice, generate `docs/decisions/issue-<N>-slice-<M>.yaml` (or `docs/decisions/issue-<N>.yaml` for a single-slice change) using `shared/templates/decision-packet-template.yaml`.
+For each confirmed slice, create `docs/decisions/issue-<N>-slice-<M>.yaml` (or `docs/decisions/issue-<N>.yaml` for a single-slice change). Create the `docs/decisions/` directory first if it does not exist.
 
-Use `shared/templates/decision-packet-template.yaml` as the exact field schema — do not invent or omit fields. Populate each field from the work completed in prior phases:
+Use **exactly** the schema below — do not add, remove, or rename fields. Populate every field from the work completed in prior phases:
+
+```yaml
+# docs/decisions/issue-<N>.yaml  (or issue-<N>-slice-<M>.yaml for multi-slice)
+issue: <N>                        # GitHub issue number (Phase 1)
+slice: null                       # slice number M, or null for single-slice (Phase 7)
+title: "<slice description>"      # from Phase 7
+change_type: feature              # feature | bugfix | refactor | infrastructure
+risk_level: medium                # low | medium | high | critical — derived from tier
+
+domains:
+  - <domain-name>                 # exactly one domain per packet (Phase 7)
+
+source_docs:
+  prd: "<path>#<requirement-ref>" # PRD path from Phase 1
+  hld:
+    - "<path>"                    # HLD path from Phase 3
+  lld:
+    - "<path>"                    # LLD path for this domain from Phase 5
+  adr:
+    - "<path>"                    # ADR paths from Phase 4 (empty list if none)
+
+tests:
+  plan: "<summary>"               # test plan summary from Phase 8
+  new_tests:
+    - "<tests/file.py::test_name>"  # full list from Phase 8
+  registry_updated: false         # developer sets true during /tdd
+
+incidents:
+  checked: true
+  relevant: null                  # incident ID from Phase 8, or null
+
+rollout:
+  risk: medium                    # same as risk_level
+  strategy: "canary 5% → 25% → 100%, 1h soak each"  # placeholder; ops refines
+  go_no_go: "<measurable criteria from LLD or incident history>"
+
+roi:
+  required: false                 # true if effort > 1 day (Phase 1)
+  estimate: null                  # roi_estimate from .hitl/current-change.yaml, or null
+
+impact_brief:
+  pm_mental_model: "<one sentence: what changes for the PM>"
+  risk_assessment: "<one sentence: main risk>"
+
+approvals:
+  architecture: pending           # architect sets to approved after review
+```
+
+Field mapping from prior phases:
 
 | Field | Source |
 |---|---|
 | `issue` | GitHub issue number from Phase 1 |
 | `slice` | Slice number M; `null` if single-slice |
 | `title` | Slice description from Phase 7 |
-| `change_type` | Derived from issue type |
-| `risk_level` | Derived from tier (0–1 → low, 2 → medium, 3–4 → high/critical) |
-| `domains` | Exactly one — the domain for this slice from Phase 7 |
-| `source_docs.prd` | PRD path from Phase 1 |
-| `source_docs.hld` | HLD path from Phase 3 |
+| `risk_level` | tier 0–1 → low, 2 → medium, 3–4 → high/critical |
+| `domains` | Exactly one domain — the domain for this slice from Phase 7 |
 | `source_docs.lld` | LLD path for this domain from Phase 5 |
 | `source_docs.adr` | ADR paths from Phase 4 that apply to this slice |
 | `tests.plan` | Test plan summary for this slice from Phase 8 |
 | `tests.new_tests` | Test list from Phase 8 |
-| `tests.registry_updated` | `false` — developer updates during `/tdd` |
-| `incidents.checked` | `true` |
 | `incidents.relevant` | Incident ID found in Phase 8, or `null` |
-| `rollout.risk` | Same as `risk_level` |
-| `rollout.strategy` | Canary percentage + soak time — placeholder for ops to refine |
 | `rollout.go_no_go` | Criteria from LLD or incident history (Phase 8) |
 | `roi.required` | `true` if effort > 1 day (Phase 1) |
 | `roi.estimate` | `roi_estimate` from `.hitl/current-change.yaml`, or `null` |
-| `impact_brief.pm_mental_model` | One sentence: what changes for the PM's mental model |
-| `impact_brief.risk_assessment` | One sentence: main risk |
 
 Update `.hitl/current-change.yaml`:
 - Add `source_artifacts.decision_packet` paths for all packets

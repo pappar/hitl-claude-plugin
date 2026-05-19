@@ -345,34 +345,55 @@ Present as a table:
 
 ### 8d. Generate decision packets
 
-For each confirmed slice, create a GitHub issue (or use the next available issue number) and generate `docs/decisions/issue-<N>-slice-<M>.yaml` (or `docs/decisions/issue-<N>.yaml` for single-slice domains) using `shared/templates/decision-packet-template.yaml`.
+For each confirmed slice, create a GitHub issue (or use the next available issue number) and create `docs/decisions/issue-<N>-slice-<M>.yaml` (or `docs/decisions/issue-<N>.yaml` for single-slice domains). Create the `docs/decisions/` directory first if it does not exist.
 
-Use `shared/templates/decision-packet-template.yaml` as the exact field schema — do not invent or omit fields. Populate each field from the work completed in prior phases. For a greenfield system, apply these defaults unless the slice warrants otherwise:
+Use **exactly** the schema below — do not add, remove, or rename fields. For a greenfield system, apply the defaults shown unless the slice warrants otherwise:
 
-| Field | Greenfield default | Source |
-|---|---|---|
-| `issue` | — | GitHub issue number for this slice |
-| `slice` | `null` if one slice per domain | Slice number M |
-| `title` | `"<domain> — initial implementation"` | Phase 8a slice description |
-| `change_type` | `feature` | — |
-| `risk_level` | `low` | Raise if cross-domain or high-traffic |
-| `domains` | — | Exactly one — from delivery plan |
-| `source_docs.prd` | — | PRD path from Phase 1 |
-| `source_docs.hld` | — | Relevant HLD path from Phase 5 |
-| `source_docs.lld` | — | Domain LLD path from Phase 6 |
-| `source_docs.adr` | — | ADRs that govern this slice |
-| `tests.plan` | — | Key scenarios derivable from facade APIs in the LLD |
-| `tests.new_tests` | `[]` | Developer fills in during `/tdd` |
-| `tests.registry_updated` | `false` | Developer updates during `/tdd` |
-| `incidents.checked` | `true` | — |
-| `incidents.relevant` | `null` | No incident history on a new system |
-| `rollout.risk` | `low` | — |
-| `rollout.strategy` | `"Direct deploy — new system, no existing traffic"` | — |
-| `rollout.go_no_go` | — | Observable criterion from demo check in 8a |
-| `roi.required` | `false` | Set `true` if slice takes > 1 day |
-| `roi.estimate` | `null` | — |
-| `impact_brief.pm_mental_model` | — | Demo check from 8a in one sentence |
-| `impact_brief.risk_assessment` | — | Main risk for this slice |
+```yaml
+# docs/decisions/issue-<N>.yaml  (or issue-<N>-slice-<M>.yaml for multi-slice)
+issue: <N>                        # GitHub issue number for this slice
+slice: null                       # slice number M, or null if one slice per domain
+title: "<domain> — initial implementation"
+change_type: feature
+risk_level: low                   # raise to medium/high if cross-domain or high-traffic
+
+domains:
+  - <domain-name>                 # exactly one domain per packet
+
+source_docs:
+  prd: "<path>#<requirement-ref>"
+  hld:
+    - "<path>"                    # relevant HLD from Phase 5
+  lld:
+    - "<path>"                    # domain LLD from Phase 6
+  adr:
+    - "<path>"                    # ADRs governing this slice (empty list if none)
+
+tests:
+  plan: "<key scenarios from facade APIs in the LLD>"
+  new_tests: []                   # developer fills in during /tdd
+  registry_updated: false
+
+incidents:
+  checked: true
+  relevant: null                  # null for new systems — no incident history
+
+rollout:
+  risk: low
+  strategy: "Direct deploy — new system, no existing traffic"
+  go_no_go: "<observable criterion from demo check in 8a>"
+
+roi:
+  required: false                 # set true if slice takes > 1 day
+  estimate: null
+
+impact_brief:
+  pm_mental_model: "<demo check from 8a in one sentence>"
+  risk_assessment: "<main risk for this slice>"
+
+approvals:
+  architecture: pending           # architect sets to approved after review
+```
 
 The `pm_mental_model` line is the demo check from 8a in one sentence — it is the handoff signal to the PM that this slice is complete.
 

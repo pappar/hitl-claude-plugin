@@ -88,4 +88,19 @@ if [[ "$STATUS" == "planning" || "$STATUS" == "design-review" ]]; then
   echo "Ensure LLD is approved before requesting code review." >&2
 fi
 
+# Block source edits if status is implementation-approved but no decision packet exists
+if [[ "$STATUS" == "implementation-approved" ]]; then
+  PACKET_PATH=$(grep "decision_packet:" "$CONTEXT_FILE" | head -1 | awk '{print $2}' | tr -d '"' || echo "")
+  if [[ -z "$PACKET_PATH" ]]; then
+    echo "HITL BLOCKED: Status is 'implementation-approved' but source_artifacts.decision_packet is not set in .hitl/current-change.yaml." >&2
+    echo "Run /architect:design-feature to complete Phase 10 and generate the decision packet before writing code." >&2
+    exit 2
+  fi
+  if [[ ! -f "$PACKET_PATH" ]]; then
+    echo "HITL BLOCKED: Decision packet listed in .hitl/current-change.yaml does not exist on disk: ${PACKET_PATH}" >&2
+    echo "Re-run /architect:design-feature Phase 10 to regenerate the missing packet." >&2
+    exit 2
+  fi
+fi
+
 exit 0
