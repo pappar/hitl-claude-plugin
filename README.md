@@ -34,6 +34,31 @@ Once installed, open Claude Code in your project and run the command that matche
 | Migrating a system | `/start-migration` |
 | Already set up — start a change | `/dev-practices` |
 
+## Contributing / Building from source
+
+Skills, commands, agents, and templates are authored in the source repo:
+
+**[github.com/Prasad-Apparaju/hitl-dev-platform](https://github.com/Prasad-Apparaju/hitl-dev-platform)** — edit files under `ai/claude/` there.
+
+After updating the source, rebuild this plugin:
+
+```bash
+# Clone both repos as siblings
+git clone https://github.com/Prasad-Apparaju/hitl-dev-platform
+git clone https://github.com/pappar/hitl-claude-plugin
+
+# Rebuild
+cd hitl-claude-plugin
+./scripts/build.sh
+
+# Review, commit, push
+git diff --stat
+git add -A && git commit -m "chore: rebuild from hitl-dev-platform"
+git push
+```
+
+The same source can be used to build plugins for other AI platforms (e.g. Codex) by following the same build pattern with a platform-specific manifest and hooks.
+
 ## License
 
 MIT
