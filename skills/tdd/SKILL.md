@@ -179,10 +179,10 @@ Update `.hitl/current-change.yaml`: set `current_step: {number: 14, name: "Gener
    | Other | Run your test runner's coverage tool; check line coverage ≥ 90% |
 
    **If coverage < 90%:**
-   - Read the coverage report. List every uncovered line or branch.
-   - For each uncovered path, generate a test that exercises it. Return to Phase 1 step 6 to add those tests.
-   - Re-run Phase 4 (Verify RED for new tests), Phase 5 (generate code if needed), then this step.
-   - Do not proceed to Phase 7 until coverage ≥ 90%.
+   - Read the coverage report. Identify every uncovered line or branch.
+   - For each uncovered path, **generate a test** that exercises it — this is AI-generated, same as Phase 1. Present the new tests to the user and go through Phase 2 (human review) for them before proceeding. Do not skip the review gate for coverage-gap tests.
+   - After Phase 2 approval: re-run Phase 4 (Verify RED for new tests), Phase 5 (generate code to make them pass if needed), then re-run this coverage check.
+   - Repeat until coverage ≥ 90%. Do not proceed to Phase 7 until the gate passes.
 
    **If coverage ≥ 90%:**
    - Record the coverage percentage in `.hitl/current-change.yaml` under `required_evidence.coverage_pct`.
