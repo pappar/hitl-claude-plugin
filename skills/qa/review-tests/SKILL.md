@@ -47,9 +47,20 @@ Flag every ❌ as a gap that must be resolved before implementation starts.
 
 ---
 
-## Step 4 — Approve or block
+## Step 4 — Verify measured coverage
 
-**If no gaps:** Update the test registry at `docs/03-engineering/testing/test-registry.yaml` to record the reviewed tests. Report: "Test coverage approved. `<N>` tests cover `<M>` acceptance criteria, `<K>` LLD error modes, and `<J>` incident regressions. Implementation may proceed."
+Check `.hitl/current-change.yaml` under `required_evidence.coverage_pct`.
 
-**If gaps exist:** List every gap with the specific spec item it fails to cover. Do not approve. Report: "Test coverage blocked. `<N>` gap(s) found — implementation must not start until these are resolved."
+**If `coverage_pct` is missing or below 90%:** Block immediately.
+> "Coverage gate not met. The TDD cycle must produce ≥90% line coverage before QA review proceeds. Ask the developer to run the coverage check from Phase 6 of `/tdd` and record the result in `.hitl/current-change.yaml` under `required_evidence.coverage_pct`."
+
+**If `coverage_pct` ≥ 90%:** note it in the approval report and proceed to Step 5.
+
+---
+
+## Step 5 — Approve or block
+
+**If no gaps and coverage ≥ 90%:** Update the test registry at `docs/03-engineering/testing/test-registry.yaml` to record the reviewed tests. Report: "Test coverage approved. `<N>` tests cover `<M>` acceptance criteria, `<K>` LLD error modes, and `<J>` incident regressions. Line coverage: `<coverage_pct>`%. Implementation may proceed."
+
+**If gaps exist or coverage < 90%:** List every gap with the specific spec item it fails to cover. Do not approve. Report: "Test coverage blocked. `<N>` gap(s) found — implementation must not start until these are resolved."
 

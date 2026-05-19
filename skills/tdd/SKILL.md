@@ -79,14 +79,17 @@ Update `.hitl/current-change.yaml`: set `current_step: {number: 10, name: "AI ge
    ```
    Fall back to reading `docs/03-engineering/testing/strategy.md` if the graph is unavailable or returns nothing specific.
 
-6. **Generate maximum test coverage** from the LLD + manifest, filling gaps not already covered:
+6. **Generate tests targeting ≥90% line coverage** from the LLD + manifest, filling gaps not already covered. The 90% threshold is a hard gate — it is checked in Phase 6 and blocks GREEN completion if not met. Structure the suite to cover:
    - Happy path tests for every method in the LLD
    - Error path tests for every `error_modes` entry in the facade
-   - Precondition tests for every `preconditions` entry
+   - Precondition tests for every `preconditions` entry — including what happens when the precondition is violated
+   - Every `if`/`else` branch and early-return path in the LLD's described logic
    - Boundary entity shape tests (verify the entity matches the manifest shape)
    - Contract tests from facade APIs (verify the domain's promises to other domains)
    - Convention tests (e.g., if `idempotency-keys` convention applies, test that the tool rejects missing keys)
    - Regression tests for every incident found in step 4
+
+   Before presenting tests, count: methods in LLD × (happy path + each error mode + each precondition violation). If this count is fewer than 3 tests per public method on average, you likely have branch gaps — add more.
 
 7. **Register each new test** in `docs/03-engineering/testing/test-registry.yaml` using the schema from `shared/templates/test-registry-template.yaml`. Required fields: `id`, `name`, `domain`, `risk`, `type`, `origin` (set to `tdd`), `file`. For incident regression tests, also set `incident_ref`.
 
@@ -162,11 +165,28 @@ Update `.hitl/current-change.yaml`: set `current_step: {number: 14, name: "Gener
 
 1. **Run the full test suite** (new + existing).
 
-2. **If all pass**, proceed to Phase 7.
+2. **If new tests pass but existing tests fail**, flag: "Regression detected in [test]. The new code broke existing behavior." Fix before proceeding.
 
-3. **If new tests pass but existing tests fail**, flag: "Regression detected in [test]. The new code broke existing behavior." Fix before proceeding.
+3. **If new tests still fail**, continue generating code to make them pass. Return to Phase 5.
 
-4. **If new tests still fail**, continue generating code to make them pass. Return to Phase 5.
+4. **Run coverage and enforce the 90% gate.** Once all tests pass, measure line coverage for the component under test:
+
+   | Language | Command |
+   |---|---|
+   | Python | `pytest --cov=<module> --cov-report=term-missing --cov-fail-under=90` |
+   | TypeScript/JS | `jest --coverage --coverageThreshold='{"global":{"lines":90}}'` |
+   | Go | `go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out` |
+   | Other | Run your test runner's coverage tool; check line coverage ≥ 90% |
+
+   **If coverage < 90%:**
+   - Read the coverage report. List every uncovered line or branch.
+   - For each uncovered path, generate a test that exercises it. Return to Phase 1 step 6 to add those tests.
+   - Re-run Phase 4 (Verify RED for new tests), Phase 5 (generate code if needed), then this step.
+   - Do not proceed to Phase 7 until coverage ≥ 90%.
+
+   **If coverage ≥ 90%:**
+   - Record the coverage percentage in `.hitl/current-change.yaml` under `required_evidence.coverage_pct`.
+   - Proceed to Phase 7.
 
 ---
 

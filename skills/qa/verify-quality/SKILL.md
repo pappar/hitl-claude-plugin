@@ -75,7 +75,10 @@ Document each finding: what you did, what you expected, what happened.
 
 ## Step 5 — Block or approve
 
-**If all criteria pass and no regressions reproduced:**
+**Before approving, verify coverage was recorded:** Check `.hitl/current-change.yaml` under `required_evidence.coverage_pct`. If missing or below 90%, block:
+> "QA blocked — line coverage not recorded or below 90%. The developer must run the coverage tool from `/tdd` Phase 6 and record the result before QA can approve."
+
+**If all criteria pass, no regressions reproduced, and coverage ≥ 90%:**
 Update `.hitl/current-change.yaml`:
 ```yaml
 approvals:
