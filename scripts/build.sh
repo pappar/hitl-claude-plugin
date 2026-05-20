@@ -40,14 +40,31 @@ done
 # ── Commands ──────────────────────────────────────────────────────────────────
 # Source layout: ai/claude/commands/
 # Plugin layout: commands/
+# README.md is excluded (not a command).
+# Commands that have a matching skills/<name>/SKILL.md are also excluded —
+# the skill is the canonical surface; keeping both causes shadowing/duplication.
 echo "Syncing commands..."
 if [[ -d "$SOURCE_DIR/ai/claude/commands" ]]; then
-  find "$SOURCE_DIR/ai/claude/commands" -name "*.md" | while read -r src; do
+  find "$SOURCE_DIR/ai/claude/commands" -name "*.md" ! -name "README.md" | while read -r src; do
     rel="${src#$SOURCE_DIR/ai/claude/commands/}"
+    name="${rel%.md}"
+    # Skip if a matching skill exists
+    if [[ -f "$PLUGIN_DIR/skills/$name/SKILL.md" ]]; then
+      continue
+    fi
     dest="$PLUGIN_DIR/commands/$rel"
     mkdir -p "$(dirname "$dest")"
     cp "$src" "$dest"
     echo "  commands/$rel"
+  done
+  # Remove any previously synced command that now has a matching skill
+  find "$PLUGIN_DIR/commands" -name "*.md" ! -name "README.md" | while read -r dest; do
+    rel="${dest#$PLUGIN_DIR/commands/}"
+    name="${rel%.md}"
+    if [[ -f "$PLUGIN_DIR/skills/$name/SKILL.md" ]]; then
+      rm "$dest"
+      echo "  removed duplicate: commands/$rel"
+    fi
   done
 fi
 
