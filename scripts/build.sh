@@ -219,23 +219,26 @@ PYEOF
 fi
 
 # ── Plugin manifest ───────────────────────────────────────────────────────────
-# Sync description from source plugin.json to keep the installed manifest current.
-echo "Syncing plugin manifest description..."
+# Sync description and version from source plugin.json to keep the installed manifest current.
+echo "Syncing plugin manifest..."
 SOURCE_PLUGIN_JSON="$SOURCE_DIR/ai/claude/plugin/plugin.json"
 DIST_PLUGIN_JSON="$PLUGIN_DIR/.claude-plugin/plugin.json"
 if [[ -f "$SOURCE_PLUGIN_JSON" ]] && [[ -f "$DIST_PLUGIN_JSON" ]]; then
-  desc=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['description'])" "$SOURCE_PLUGIN_JSON")
-  python3 - "$DIST_PLUGIN_JSON" "$desc" <<'PYEOF'
+  python3 - "$DIST_PLUGIN_JSON" "$SOURCE_PLUGIN_JSON" <<'PYEOF'
 import json, sys
-dist_file, new_desc = sys.argv[1], sys.argv[2]
+dist_file, src_file = sys.argv[1], sys.argv[2]
 with open(dist_file) as f:
-    data = json.load(f)
-data['description'] = new_desc
+    dist = json.load(f)
+with open(src_file) as f:
+    src = json.load(f)
+for field in ('description', 'version'):
+    if field in src:
+        dist[field] = src[field]
 with open(dist_file, 'w') as f:
-    json.dump(data, f, indent=2)
+    json.dump(dist, f, indent=2)
     f.write('\n')
 PYEOF
-  echo "  .claude-plugin/plugin.json description updated"
+  echo "  .claude-plugin/plugin.json synced"
 fi
 
 # ── Shared templates ──────────────────────────────────────────────────────────
@@ -301,6 +304,54 @@ find "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" \
     -e 's|skills/dev-apply-change/|${CLAUDE_PLUGIN_ROOT}/skills/dev-apply-change/|g' \
     "$f"
 done
+
+# ── Post-build checks ────────────────────────────────────────────────────────
+
+# Guard: mangled relative+CLAUDE_PLUGIN_ROOT links (e.g. ../../../${CLAUDE_PLUGIN_ROOT}/...)
+echo "Checking for mangled relative plugin paths..."
+mangled=$(grep -rl '\.\./.*\${CLAUDE_PLUGIN_ROOT}' \
+  "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" 2>/dev/null || true)
+if [[ -n "$mangled" ]]; then
+  echo "ERROR: found relative paths combined with \${CLAUDE_PLUGIN_ROOT}:" >&2
+  echo "$mangled" >&2
+  grep -rn '\.\./.*\${CLAUDE_PLUGIN_ROOT}' \
+    "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" >&2
+  exit 1
+fi
+echo "  no mangled paths found"
+
+# Guard: YAML frontmatter parse errors in all SKILL.md files
+echo "Validating SKILL.md frontmatter..."
+python3 - "$PLUGIN_DIR/skills" <<'PYEOF'
+import os, sys, yaml
+
+skills_dir = sys.argv[1]
+errors = []
+for root, _dirs, files in os.walk(skills_dir):
+    for fname in files:
+        if fname != 'SKILL.md':
+            continue
+        fpath = os.path.join(root, fname)
+        with open(fpath) as fh:
+            content = fh.read()
+        if not content.startswith('---'):
+            continue
+        end = content.find('---', 3)
+        if end == -1:
+            continue
+        fm = content[3:end]
+        try:
+            yaml.safe_load(fm)
+        except yaml.YAMLError as e:
+            errors.append(f"  {os.path.relpath(fpath, skills_dir)}: {e}")
+
+if errors:
+    print("ERROR: YAML frontmatter parse failures:", file=sys.stderr)
+    for e in errors:
+        print(e, file=sys.stderr)
+    sys.exit(1)
+print(f"  {sum(1 for r,_,fs in os.walk(skills_dir) for f in fs if f=='SKILL.md')} SKILL.md files OK")
+PYEOF
 
 echo ""
 echo "Build complete."
