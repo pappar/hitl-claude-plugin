@@ -18,9 +18,9 @@ claude plugin update hitl-claude-plugin
 
 | Component | Contents |
 |-----------|----------|
-| **40 skills** | `/start-prd`, `/start-brownfield`, `/start-migration`, `/dev-practices` (32-step workflow), `/tdd`, `/generate-docs`, `/apply-change`, and role namespaces `/architect:*`, `/pm:*`, `/qa:*`, `/ops:*` |
+| **40 skills** | `/hitl:dev:start-prd`, `/hitl:dev:start-brownfield`, `/hitl:dev:start-migration`, `/hitl:dev:practices` (32-step workflow), `/hitl:dev:tdd`, `/hitl:dev:generate-docs`, `/hitl:dev:apply-change`, and role namespaces `/hitl:architect:*`, `/hitl:pm:*`, `/hitl:qa:*`, `/hitl:ops:*` |
 | **6 agents** | Architect reviewer, developer implementer, QA reviewer, PM reviewer, ops release reviewer, spec conformance reviewer |
-| **5 commands** | `/check-implementation`, `/architect:review-design`, `/architect:verify-traceability`, `/ops:review-release`, `/ops:monitor-canary` |
+| **5 commands** | `/hitl:dev:check-implementation`, `/hitl:architect:review-design`, `/hitl:architect:verify-traceability`, `/hitl:ops:review-release`, `/hitl:ops:monitor-canary` |
 | **Hooks** | Welcome banner, HITL context check, domain boundary enforcement, session summary |
 
 ## Documentation
@@ -35,10 +35,10 @@ Once installed, open Claude Code in your project and run the command that matche
 
 | Situation | Command |
 |-----------|---------|
-| New project — greenfield from a PRD | `/start-prd` |
-| Existing codebase — adopt the process | `/start-brownfield` |
-| Migrating a system | `/start-migration` |
-| Already set up — start a change | `/dev-practices` |
+| New project — greenfield from a PRD | `/hitl:dev:start-prd` |
+| Existing codebase — adopt the process | `/hitl:dev:start-brownfield` |
+| Migrating a system | `/hitl:dev:start-migration` |
+| Already set up — start a change | `/hitl:dev:practices` |
 
 ## Contributing / Building from source
 

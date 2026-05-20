@@ -1,5 +1,4 @@
 ---
-name: hitl:dev:conclude
 description: Turn a concluded Slack design-room thread into GitHub artifacts — ADR, issue, and HLD/LLD updates. Reads the thread, extracts the decision, confirms the summary, then generates and commits the artifacts. Use after a team has reached a decision in a Slack thread.
 argument-hint: "[Slack thread URL or topic description]"
 disable-model-invocation: true
@@ -80,7 +79,7 @@ Do NOT proceed until the user confirms.
 If an ADR is needed:
 
 1. **Read existing ADRs** in `docs/02-design/technical/adrs/` to determine the next available number and check for related ADRs
-2. **Generate the ADR** following the template at `shared/templates/adr-template.md`:
+2. **Generate the ADR** following the template at `ai/shared/templates/adr-template.md`:
    - **Context** — from the thread discussion (the problem, constraints, what triggered it)
    - **Decision** — the concluded choice, with enough detail to implement
    - **Alternatives** — each rejected option with the reason from the thread
@@ -108,7 +107,7 @@ If the decision introduces a new component not in the current design, note: "Thi
 
 ## Step 5 — Create the GitHub issue
 
-Generate a GitHub issue using the issue template (`shared/templates/issue-template.md`):
+Generate a GitHub issue using the issue template (`ai/shared/templates/issue-template.md`):
 
 - **Title:** Action item from the decision (imperative mood)
 - **Body:**

@@ -1,5 +1,4 @@
 ---
-name: hitl:dev:generate-docs
 description: Generate HLD, LLD, ADR, system manifest, and CLAUDE.md for a new feature (forward design) or existing codebase (brownfield reverse-engineer). Use before implementation starts on any Tier 2+ change, or to bootstrap a documentation baseline for an existing repo. Creates files — do not invoke spontaneously.
 argument-hint: "[feature name] | [reverse-engineer]"
 disable-model-invocation: true
@@ -36,7 +35,7 @@ Otherwise → use **New Feature Mode** (Phase 1-2 below).
 
 1. **Determine the feature name** from the user's description. Use kebab-case (e.g., `campaign-scheduler`).
 
-2. **Create `docs/02-design/technical/hld/<feature-name>.md`** using the template at `shared/templates/hld-template.md`. The document must contain:
+2. **Create `docs/02-design/technical/hld/<feature-name>.md`** using the template at `ai/shared/templates/hld-template.md`. The document must contain:
    - Executive summary
    - System architecture diagram (Mermaid `graph TB`)
    - Component overview table with responsibilities
@@ -63,7 +62,7 @@ Only proceed after HLD approval.
    - `security/` — Auth, guards
    - `config/` — Configuration
 
-2. **For each component**, create `docs/02-design/technical/lld/<category>/<component-name>.md` using `shared/templates/lld-component-template.md`. Each file must include:
+2. **For each component**, create `docs/02-design/technical/lld/<category>/<component-name>.md` using `ai/shared/templates/lld-component-template.md`. Each file must include:
    - Overview + purpose
    - Mermaid class diagram
    - Method signatures with parameters, return types, descriptions
@@ -92,7 +91,7 @@ This mode reads the existing codebase and generates the full documentation basel
    - Decorators + base classes → convention patterns
    - Test files → test coverage map
 
-2. **Generate `docs/system-manifest.yaml`** with ALL sections from `shared/templates/system-manifest.schema.yaml`:
+2. **Generate `docs/system-manifest.yaml`** with ALL sections from `ai/claude/generate-docs/templates/system-manifest.schema.yaml`:
 
    **Per domain:**
    - `purpose`: one-line description (infer from directory name + file contents)
@@ -130,7 +129,7 @@ This mode reads the existing codebase and generates the full documentation basel
 
 ### Phase R2 — HLDs (Days 2-3 equivalent)
 
-1. **For each major system area**, generate an HLD using `shared/templates/hld-template.md`:
+1. **For each major system area**, generate an HLD using `ai/shared/templates/hld-template.md`:
    - Read the actual source code for that area
    - Extract the architecture from what EXISTS, not what should exist
    - Use real class names, real endpoints, real data flows
@@ -150,7 +149,7 @@ This mode reads the existing codebase and generates the full documentation basel
 
 ### Phase R3 — LLDs (Days 3-4 equivalent)
 
-1. **For each domain in the manifest**, generate LLDs using `shared/templates/lld-component-template.md`:
+1. **For each domain in the manifest**, generate LLDs using `ai/shared/templates/lld-component-template.md`:
    - Read the actual source files listed in the manifest's domain entry
    - Extract real class hierarchies, method signatures, dependencies
    - Generate class diagrams from the actual code (via AST analysis)
@@ -175,7 +174,7 @@ This mode reads the existing codebase and generates the full documentation basel
    - Authentication/authorization approach (from middleware/guards)
    - Error handling patterns (from try/catch patterns, error classes)
 
-2. **For each detected decision**, generate a forensic ADR using `shared/templates/adr-template.md`:
+2. **For each detected decision**, generate a forensic ADR using `ai/shared/templates/adr-template.md`:
    - Context: "Based on the code, this system uses [X]"
    - Decision: "The decision appears to be [Y]"
    - Rationale: "The likely rationale is [Z]"
@@ -193,7 +192,7 @@ This mode reads the existing codebase and generates the full documentation basel
 
 ### Phase R5 — Process Setup (Day 5 equivalent)
 
-1. **Generate `CLAUDE.md`** from the template at `shared/templates/CLAUDE.md.template`:
+1. **Generate `CLAUDE.md`** from the template at `ai/shared/templates/CLAUDE.md.template`:
    - Fill in the cross-cutting conventions discovered in Phase R1 (inline, not just links)
    - Fill in the coding standards detected from the codebase:
      - Language + framework (from imports / package.json / pyproject.toml)
@@ -220,15 +219,15 @@ This mode reads the existing codebase and generates the full documentation basel
 4. **Copy CI actions** to `.github/workflows/` if they don't exist:
    - `convention-check.yml` — runs convention checker, manifest drift detection, and Mermaid checks on every PR
 
-5. **Generate `.github/ISSUE_TEMPLATE/technical-change.md`** from `shared/templates/issue-template.md`:
+5. **Generate `.github/ISSUE_TEMPLATE/technical-change.md`** from `ai/shared/templates/issue-template.md`:
    - Pre-filled with the ROI estimation section
    - Includes downstream impact brief prompts
    - Includes training plan link placeholder
 
 6. **Create registry stubs** if they don't exist:
 
-   - **Test registry** (`docs/03-engineering/testing/test-registry.yaml`): generate from the test files discovered in Phase R1 using the schema from `shared/templates/test-registry-template.yaml`. One entry per test file; populate `id`, `name`, `domain`, `file`, and `type` from what is discoverable; set `risk: DRAFT` and `origin: tdd`; leave `incident_ref: null` for the architect to classify.
-   - **Incident registry** (`docs/04-operations/incident-registry.yaml`): create an empty stub from `shared/templates/incident-registry-template.yaml` — header and schema structure only, no fabricated incidents.
+   - **Test registry** (`docs/03-engineering/testing/test-registry.yaml`): generate from the test files discovered in Phase R1 using the schema from `ai/shared/templates/test-registry-template.yaml`. One entry per test file; populate `id`, `name`, `domain`, `file`, and `type` from what is discoverable; set `risk: DRAFT` and `origin: tdd`; leave `incident_ref: null` for the architect to classify.
+   - **Incident registry** (`docs/04-operations/incident-registry.yaml`): create an empty stub from `ai/shared/templates/incident-registry-template.yaml` — header and schema structure only, no fabricated incidents.
 
    After generating, say: "I've created registry stubs. The test registry has [N] entries from discovered test files — add `risk` classifications and `covers` links as you review each domain. The incident registry is empty. Before starting change work, ask your team: *What broke in production in the last 6 months?* Each answer is one entry."
 
@@ -240,7 +239,7 @@ This mode reads the existing codebase and generates the full documentation basel
    - Any custom framework or abstraction used across 3+ files
    - Any external system integration (API clients, SDKs)
    - Any architectural pattern that deviates from the framework default
-   - For each candidate, create a stub at `docs/03-engineering/training/<name>.md` using `shared/templates/training-plan-template.md` with module outlines and reading lists pointing to the just-generated LLDs
+   - For each candidate, create a stub at `docs/03-engineering/training/<name>.md` using `ai/shared/templates/training-plan-template.md` with module outlines and reading lists pointing to the just-generated LLDs
 
 9. **Generate the docs README** — `docs/README.md` with:
    - A table of contents linking to all HLDs, LLDs, ADRs, training plans

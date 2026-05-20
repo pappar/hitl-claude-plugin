@@ -1,5 +1,4 @@
 ---
-name: hitl:dev:apply-change
 description: Apply the HITL dev-practices workflow to analyze and plan a change before writing any code. Use when a developer is about to start implementing a feature, bug fix, or refactor and needs to produce an impact analysis, documentation plan, test plan, and execution order. Refuses to proceed if no GitHub issue exists.
 argument-hint: "[change description or issue number]"
 disable-model-invocation: true
@@ -15,7 +14,7 @@ disable-model-invocation: true
 
 ## Challenge Stance
 
-This skill is a design-phase skill. The challenge stance from `shared/challenge-stance.md` applies throughout — challenge vague requirements, surface tradeoffs, require evidence. In particular: if the issue has vague acceptance criteria, no supporting data, or unstated NFRs relevant to the affected domain, raise them at Step 1 before doing any analysis.
+This skill is a design-phase skill. The challenge stance from `ai/shared/challenge-stance.md` applies throughout — challenge vague requirements, surface tradeoffs, require evidence. In particular: if the issue has vague acceptance criteria, no supporting data, or unstated NFRs relevant to the affected domain, raise them at Step 1 before doing any analysis.
 
 ---
 

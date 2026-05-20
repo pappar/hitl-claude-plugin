@@ -1,5 +1,4 @@
 ---
-name: hitl:pm:design-feature
 description: Collaborate with PM to design a feature from a rough idea into a structured requirement with user stories, acceptance criteria, and scope boundaries.
 argument-hint: "[rough feature idea]"
 disable-model-invocation: true
@@ -32,7 +31,7 @@ Before Phase 1, ask:
 >
 > Say **Rigorous**, **Moderate**, or **Light** to set the level."
 
-Apply the chosen level throughout the session as defined in `shared/challenge-stance.md` — Challenge Levels section. Default to **Moderate** if the PM doesn't specify.
+Apply the chosen level throughout the session as defined in `ai/shared/challenge-stance.md` — Challenge Levels section. Default to **Moderate** if the PM doesn't specify.
 
 ---
 

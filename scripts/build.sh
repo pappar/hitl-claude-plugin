@@ -25,31 +25,64 @@ echo "Into:          $PLUGIN_DIR"
 echo ""
 
 # ── Skills ────────────────────────────────────────────────────────────────────
-# Source layout: ai/claude/<skill-name>/SKILL.md
-# Plugin layout: skills/<skill-name>/SKILL.md
+# Source layout: ai/claude/<skill>/SKILL.md (flat for dev) or ai/claude/<role>/<skill>/SKILL.md
+# Plugin layout: skills/dev/<skill>/ for developer skills; skills/<role>/<skill>/ for role skills
+# Special remaps: dev-practices → dev/practices, migrate/review-external-docs → dev/review-external-docs
 echo "Syncing skills..."
+
+# Remove stale flat dev skill dirs — they move under skills/dev/
+for stale_dir in \
+  apply-change check-conventions conclude dev-practices generate-docs \
+  impact-brief migrate review-security start-brownfield start-migration \
+  start-prd tdd; do
+  rm -rf "$PLUGIN_DIR/skills/$stale_dir"
+done
+
+remap_skill_path() {
+  local rel="$1"
+  case "$rel" in
+    dev-practices/*)                echo "dev/practices/${rel#dev-practices/}" ;;
+    migrate/review-external-docs/*) echo "dev/review-external-docs/${rel#migrate/review-external-docs/}" ;;
+    architect/*|pm/*|qa/*|ops/*)    echo "$rel" ;;
+    *)                              echo "dev/$rel" ;;
+  esac
+}
+
 find "$SOURCE_DIR/ai/claude" \( -name "SKILL.md" -o -name "*.md" \) \
-  ! -path "*/agents/*" ! -path "*/commands/*" | while read -r src; do
-  rel="${src#$SOURCE_DIR/ai/claude/}"        # e.g. tdd/SKILL.md or qa/plan-tests/SKILL.md
-  dest="$PLUGIN_DIR/skills/$rel"
+  ! -path "*/agents/*" ! -path "*/commands/*" ! -path "*/hooks/*" \
+  ! -path "*/plugin/*" ! -path "*/shared/*" \
+  ! -path "*/generate-docs/templates/*" \
+  ! -name "README.md" | while read -r src; do
+  rel="${src#$SOURCE_DIR/ai/claude/}"
+  mapped_rel=$(remap_skill_path "$rel")
+  dest="$PLUGIN_DIR/skills/$mapped_rel"
   mkdir -p "$(dirname "$dest")"
   cp "$src" "$dest"
-  echo "  skills/$rel"
+  echo "  skills/$mapped_rel"
 done
 
 # ── Commands ──────────────────────────────────────────────────────────────────
 # Source layout: ai/claude/commands/
 # Plugin layout: commands/
 # README.md is excluded (not a command).
-# Commands that have a matching skills/<name>/SKILL.md are also excluded —
-# the skill is the canonical surface; keeping both causes shadowing/duplication.
+# Commands that have a matching skill are excluded — the skill is the canonical surface.
+# Skill lookup accounts for dev/ remapping: check skills/<name>/, skills/dev/<name>/,
+# and the dev-practices → dev/practices rename.
 echo "Syncing commands..."
+
+skill_exists_for_cmd() {
+  local name="$1"
+  [[ -f "$PLUGIN_DIR/skills/$name/SKILL.md" ]] ||
+  [[ -f "$PLUGIN_DIR/skills/dev/$name/SKILL.md" ]] ||
+  { [[ "$name" == "dev-practices" ]] && [[ -f "$PLUGIN_DIR/skills/dev/practices/SKILL.md" ]]; }
+}
+
 if [[ -d "$SOURCE_DIR/ai/claude/commands" ]]; then
   find "$SOURCE_DIR/ai/claude/commands" -name "*.md" ! -name "README.md" | while read -r src; do
     rel="${src#$SOURCE_DIR/ai/claude/commands/}"
     name="${rel%.md}"
     # Skip if a matching skill exists
-    if [[ -f "$PLUGIN_DIR/skills/$name/SKILL.md" ]]; then
+    if skill_exists_for_cmd "$name"; then
       continue
     fi
     dest="$PLUGIN_DIR/commands/$rel"
@@ -61,7 +94,7 @@ if [[ -d "$SOURCE_DIR/ai/claude/commands" ]]; then
   find "$PLUGIN_DIR/commands" -name "*.md" ! -name "README.md" | while read -r dest; do
     rel="${dest#$PLUGIN_DIR/commands/}"
     name="${rel%.md}"
-    if [[ -f "$PLUGIN_DIR/skills/$name/SKILL.md" ]]; then
+    if skill_exists_for_cmd "$name"; then
       rm "$dest"
       echo "  removed duplicate: commands/$rel"
     fi
