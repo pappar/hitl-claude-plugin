@@ -18,7 +18,7 @@ claude plugins update hitl-claude-plugin
 
 | Component | Contents |
 |-----------|----------|
-| **29 skills** | `/start-prd`, `/start-brownfield`, `/start-migration`, `/dev-practices` (31-step workflow), `/tdd`, `/generate-docs`, `/apply-change`, and role namespaces `/architect:*`, `/pm:*`, `/qa:*`, `/ops:*` |
+| **40 skills** | `/start-prd`, `/start-brownfield`, `/start-migration`, `/dev-practices` (32-step workflow), `/tdd`, `/generate-docs`, `/apply-change`, and role namespaces `/architect:*`, `/pm:*`, `/qa:*`, `/ops:*` |
 | **6 agents** | Architect reviewer, developer implementer, QA reviewer, PM reviewer, ops release reviewer, spec conformance reviewer |
 | **5 commands** | `/check-implementation`, `/architect:review-design`, `/architect:verify-traceability`, `/ops:review-release`, `/ops:monitor-canary` |
 | **Hooks** | Welcome banner, HITL context check, domain boundary enforcement, session summary |

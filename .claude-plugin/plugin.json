@@ -1,7 +1,6 @@
 {
   "name": "hitl-dev-platform",
-  "version": "1.0.0",
-  "description": "HITL AI-Driven Development. Document-driven delivery for teams using AI heavily. Use /start-prd, /start-brownfield, or /start-migration to set up a project, then /dev-practices for the full 31-step workflow, role commands (/pm:*, /architect:*, /qa:*, /ops:*), and enforcement hooks.",
+  "description": "HITL AI-Driven Development. Document-driven delivery for teams using AI heavily. Use /start-prd, /start-brownfield, or /start-migration to set up a project, then /dev-practices for the full 32-step workflow, role commands (/pm:*, /architect:*, /qa:*, /ops:*), and enforcement hooks.",
   "author": {
     "name": "pappar"
   },
