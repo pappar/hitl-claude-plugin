@@ -65,6 +65,20 @@ if [[ -d "$SOURCE_DIR/ai/claude/agents" ]]; then
   done
 fi
 
+# ── Hooks ─────────────────────────────────────────────────────────────────────
+# Source layout: ai/claude/hooks/
+# Plugin layout: hooks/
+echo "Syncing hooks..."
+if [[ -d "$SOURCE_DIR/ai/claude/hooks" ]]; then
+  find "$SOURCE_DIR/ai/claude/hooks" -name "*.sh" -o -name "*.json" | while read -r src; do
+    rel="${src#$SOURCE_DIR/ai/claude/hooks/}"
+    dest="$PLUGIN_DIR/hooks/$rel"
+    mkdir -p "$(dirname "$dest")"
+    cp "$src" "$dest"
+    echo "  hooks/$rel"
+  done
+fi
+
 # ── Shared templates ──────────────────────────────────────────────────────────
 # Two source locations feed shared/templates/:
 #   ai/shared/templates/      — registry templates, decision packet, issue, training plan, etc.
