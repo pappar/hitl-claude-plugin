@@ -8,6 +8,12 @@ A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin for the *
 claude plugins install pappar/hitl-claude-plugin
 ```
 
+## Update
+
+```bash
+claude plugins update hitl-claude-plugin
+```
+
 ## What you get
 
 | Component | Contents |
