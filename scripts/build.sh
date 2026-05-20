@@ -320,38 +320,15 @@ if [[ -n "$mangled" ]]; then
 fi
 echo "  no mangled paths found"
 
-# Guard: YAML frontmatter parse errors in all SKILL.md files
-echo "Validating SKILL.md frontmatter..."
-python3 - "$PLUGIN_DIR/skills" <<'PYEOF'
-import os, sys, yaml
-
-skills_dir = sys.argv[1]
-errors = []
-for root, _dirs, files in os.walk(skills_dir):
-    for fname in files:
-        if fname != 'SKILL.md':
-            continue
-        fpath = os.path.join(root, fname)
-        with open(fpath) as fh:
-            content = fh.read()
-        if not content.startswith('---'):
-            continue
-        end = content.find('---', 3)
-        if end == -1:
-            continue
-        fm = content[3:end]
-        try:
-            yaml.safe_load(fm)
-        except yaml.YAMLError as e:
-            errors.append(f"  {os.path.relpath(fpath, skills_dir)}: {e}")
-
-if errors:
-    print("ERROR: YAML frontmatter parse failures:", file=sys.stderr)
-    for e in errors:
-        print(e, file=sys.stderr)
-    sys.exit(1)
-print(f"  {sum(1 for r,_,fs in os.walk(skills_dir) for f in fs if f=='SKILL.md')} SKILL.md files OK")
-PYEOF
+# Validate plugin structure (frontmatter, manifest, skill layout) via the
+# canonical Claude Code validator — no extra Python dependencies required.
+echo "Validating plugin structure..."
+if command -v claude &>/dev/null; then
+  claude plugin validate "$PLUGIN_DIR"
+  echo "  plugin validation passed"
+else
+  echo "  SKIP: 'claude' not on PATH — run 'claude plugin validate $PLUGIN_DIR' before release"
+fi
 
 echo ""
 echo "Build complete."
