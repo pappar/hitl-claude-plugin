@@ -56,6 +56,8 @@ git clone https://github.com/pappar/hitl-claude-plugin
 # Rebuild
 cd hitl-claude-plugin
 ./scripts/build.sh
+# If 'claude' on your PATH is a broken wrapper, override the binary:
+# CLAUDE_BIN=/path/to/claude ./scripts/build.sh
 
 # Review, commit, push
 git diff --stat
