@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ai/claude/hooks/welcome.sh"
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/welcome.sh\""
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ai/claude/hooks/check-hitl-context.sh"
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/check-hitl-context.sh\""
           }
         ]
       }
@@ -27,15 +27,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ai/claude/hooks/check-domain-boundary.sh"
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/check-domain-boundary.sh\""
           },
           {
             "type": "command",
-            "command": "bash ai/claude/hooks/rebuild-graph.sh"
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/rebuild-graph.sh\""
           },
           {
             "type": "command",
-            "command": "bash ai/claude/hooks/sync-step-to-issue.sh"
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/sync-step-to-issue.sh\""
           }
         ]
       }
@@ -45,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ai/claude/hooks/write-session-summary.sh"
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/write-session-summary.sh\""
           }
         ]
       }

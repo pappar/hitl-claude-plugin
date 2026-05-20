@@ -67,6 +67,10 @@ if [[ -d "$SOURCE_DIR/ai/claude/commands" ]]; then
     fi
   done
 fi
+# README.md is not a command — remove it from the scanned commands/ directory
+rm -f "$PLUGIN_DIR/commands/README.md"
+# Remove any empty subdirectories left over from deleted command files
+find "$PLUGIN_DIR/commands" -mindepth 1 -type d -empty -delete 2>/dev/null || true
 
 # ── Agents ────────────────────────────────────────────────────────────────────
 # Source layout: ai/claude/agents/
@@ -94,6 +98,45 @@ if [[ -d "$SOURCE_DIR/ai/claude/hooks" ]]; then
     cp "$src" "$dest"
     echo "  hooks/$rel"
   done
+fi
+
+# ── Rewrite hooks.json paths for plugin runtime ────────────────────────────────
+# Source hooks.json uses "bash ai/claude/hooks/<name>.sh" — those paths don't
+# exist in the plugin package. Rewrite to CLAUDE_PLUGIN_ROOT-relative paths.
+HOOKS_JSON="$PLUGIN_DIR/hooks/hooks.json"
+if [[ -f "$HOOKS_JSON" ]]; then
+  echo "Rewriting hook command paths in hooks/hooks.json..."
+  python3 - "$HOOKS_JSON" <<'PYEOF'
+import json, re, sys
+hooks_file = sys.argv[1]
+
+def rewrite(obj):
+    if isinstance(obj, dict):
+        return {k: rewrite(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [rewrite(v) for v in obj]
+    if isinstance(obj, str):
+        return re.sub(
+            r'bash ai/claude/hooks/(\S+)',
+            r'bash "${CLAUDE_PLUGIN_ROOT}/hooks/\1"',
+            obj
+        )
+    return obj
+
+with open(hooks_file) as f:
+    data = json.load(f)
+data = rewrite(data)
+with open(hooks_file, 'w') as f:
+    json.dump(data, f, indent=2)
+    f.write('\n')
+PYEOF
+
+  if grep -q 'ai/claude/hooks/' "$HOOKS_JSON"; then
+    echo "ERROR: hooks/hooks.json still contains 'ai/claude/hooks/' paths after rewrite." >&2
+    grep -n 'ai/claude/hooks/' "$HOOKS_JSON" >&2
+    exit 1
+  fi
+  echo "  hooks/hooks.json paths rewritten OK"
 fi
 
 # ── Shared templates ──────────────────────────────────────────────────────────
