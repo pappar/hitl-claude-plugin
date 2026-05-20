@@ -148,6 +148,8 @@ if [[ -d "$SOURCE_DIR/ai/claude/commands" ]]; then
 fi
 # README.md is not a command — remove it if accidentally copied
 rm -f "$PLUGIN_DIR/commands/README.md"
+# skills/README.md is source-repo documentation, not a skill — remove if present
+rm -f "$PLUGIN_DIR/skills/README.md"
 
 # ── Agents ────────────────────────────────────────────────────────────────────
 # Source layout: ai/claude/agents/
@@ -216,6 +218,26 @@ PYEOF
   echo "  hooks/hooks.json paths rewritten OK"
 fi
 
+# ── Plugin manifest ───────────────────────────────────────────────────────────
+# Sync description from source plugin.json to keep the installed manifest current.
+echo "Syncing plugin manifest description..."
+SOURCE_PLUGIN_JSON="$SOURCE_DIR/ai/claude/plugin/plugin.json"
+DIST_PLUGIN_JSON="$PLUGIN_DIR/.claude-plugin/plugin.json"
+if [[ -f "$SOURCE_PLUGIN_JSON" ]] && [[ -f "$DIST_PLUGIN_JSON" ]]; then
+  desc=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['description'])" "$SOURCE_PLUGIN_JSON")
+  python3 - "$DIST_PLUGIN_JSON" "$desc" <<'PYEOF'
+import json, sys
+dist_file, new_desc = sys.argv[1], sys.argv[2]
+with open(dist_file) as f:
+    data = json.load(f)
+data['description'] = new_desc
+with open(dist_file, 'w') as f:
+    json.dump(data, f, indent=2)
+    f.write('\n')
+PYEOF
+  echo "  .claude-plugin/plugin.json description updated"
+fi
+
 # ── Shared templates ──────────────────────────────────────────────────────────
 # Two source locations feed shared/templates/:
 #   ai/shared/templates/      — registry templates, decision packet, issue, training plan, etc.
@@ -244,17 +266,39 @@ if [[ -f "$SOURCE_DIR/ai/shared/challenge-stance.md" ]]; then
 fi
 
 # ── Normalize internal paths ──────────────────────────────────────────────────
-# hitl-dev-platform uses paths rooted at its own repo root (ai/shared/templates/).
-# The plugin flattens these into shared/templates/ — fix references in all
-# copied skill, command, and agent files.
+# Two-pass rewrite (idempotent):
+# Pass 1 — flatten source-relative paths to plugin-relative paths:
+#   ai/shared/templates/             → shared/templates/
+#   ai/claude/generate-docs/templates/ → shared/templates/
+#   ai/shared/challenge-stance.md    → shared/challenge-stance.md
+#   ai/claude/dev-practices/         → skills/dev-practices/
+#   ai/claude/apply-change/          → skills/dev-apply-change/
+# Pass 2 — add ${CLAUDE_PLUGIN_ROOT}/ prefix to all plugin-bundled refs so
+#   Claude resolves them relative to the installed plugin, not the user's project.
+#   Strip any existing prefix first (idempotency), then add it.
 echo "Normalizing path references..."
 find "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" \
      "$PLUGIN_DIR/shared" \
      \( -name "*.md" -o -name "*.yaml" \) | while read -r f; do
+  # Pass 1: flatten source-relative → plugin-relative
   sed -i '' \
     -e 's|ai/shared/templates/|shared/templates/|g' \
     -e 's|ai/claude/generate-docs/templates/|shared/templates/|g' \
     -e 's|ai/shared/challenge-stance\.md|shared/challenge-stance.md|g' \
+    -e 's|ai/claude/dev-practices/|skills/dev-practices/|g' \
+    -e 's|ai/claude/apply-change/|skills/dev-apply-change/|g' \
+    "$f"
+  # Pass 2: add ${CLAUDE_PLUGIN_ROOT}/ prefix to plugin-bundled paths.
+  # Strip any existing prefix first (idempotency — makes this safe to re-run),
+  # then add. \b not available in BSD sed, so we rely on pass 1 having
+  # reduced all occurrences to bare plugin-relative paths before we prefix them.
+  sed -i '' \
+    -e 's|\${CLAUDE_PLUGIN_ROOT}/shared/|shared/|g' \
+    -e 's|\${CLAUDE_PLUGIN_ROOT}/skills/|skills/|g' \
+    -e 's|shared/templates/|${CLAUDE_PLUGIN_ROOT}/shared/templates/|g' \
+    -e 's|shared/challenge-stance\.md|${CLAUDE_PLUGIN_ROOT}/shared/challenge-stance.md|g' \
+    -e 's|skills/dev-practices/|${CLAUDE_PLUGIN_ROOT}/skills/dev-practices/|g' \
+    -e 's|skills/dev-apply-change/|${CLAUDE_PLUGIN_ROOT}/skills/dev-apply-change/|g' \
     "$f"
 done
 

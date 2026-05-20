@@ -54,7 +54,7 @@ Before reading the manifest or doing any analysis, challenge the issue against i
 
 1. **Is the problem statement specific?** If the issue says "users want X" or "improve Y" without data, ask: "What evidence supports this — support tickets, analytics, churn feedback, user research?" For migration: "What in the migration brief or external reference docs supports this slice being needed now?"
 2. **Are the acceptance criteria testable?** Vague AC ("should feel fast", "user-friendly") cannot drive an LLD or tests. Ask for specific, measurable criteria before proceeding.
-3. **Are NFRs relevant to this change stated?** If the change affects throughput, latency, or availability, are the targets in the issue or findable in the requirements source? If not, ask — see `shared/challenge-stance.md` for the full NFR checklist.
+3. **Are NFRs relevant to this change stated?** If the change affects throughput, latency, or availability, are the targets in the issue or findable in the requirements source? If not, ask — see `${CLAUDE_PLUGIN_ROOT}/shared/challenge-stance.md` for the full NFR checklist.
 4. **Is the proposed solution the right solution?** State the problem, then ask: "Is there a simpler approach that would solve the same problem?" If yes, name it and the tradeoff before designing the proposed solution.
 
 If any answer is unsatisfactory, resolve it now — not after the HLD is generated.
@@ -88,7 +88,7 @@ If backwards-incompatible changes are identified, flag them explicitly. Do not p
 
 ### 1e. Determine the tier
 
-Use the tier definitions from `skills/dev-practices/SKILL.md`. State the tier with justification.
+Use the tier definitions from `${CLAUDE_PLUGIN_ROOT}/skills/dev-practices/SKILL.md`. State the tier with justification.
 
 **Challenge the tier before accepting it:**
 - Cross-domain or multi-service changes are Tier 3 even when described as simple
@@ -99,7 +99,7 @@ Use the tier definitions from `skills/dev-practices/SKILL.md`. State the tier wi
 
 Estimate implementation effort (in days) based on the number of affected domains, facade API changes, and IaC scope. This determines whether step 4 (ROI) is required.
 
-For token cost estimation, use the phase-level formula from `skills/dev-practices/roi-estimation.md`.
+For token cost estimation, use the phase-level formula from `${CLAUDE_PLUGIN_ROOT}/skills/dev-practices/roi-estimation.md`.
 
 ### 1g. Initialize `.hitl/current-change.yaml`
 
@@ -145,7 +145,7 @@ Do not proceed until the architect confirms.
 
 If effort estimate exceeds 1 day:
 
-Record the ROI section in `.hitl/current-change.yaml` under `roi_estimate` using the template in `skills/dev-practices/roi-estimation.md`. Fill in:
+Record the ROI section in `.hitl/current-change.yaml` under `roi_estimate` using the template in `${CLAUDE_PLUGIN_ROOT}/skills/dev-practices/roi-estimation.md`. Fill in:
 - Value dimension
 - Expected outcome (specific, falsifiable, with timeframe)
 - Baseline metric placeholder (note: architect must measure this now, not estimate it)
@@ -212,7 +212,7 @@ After HLD approval:
 
 1. From the approved HLD, identify every design decision — framework choice, pattern selection, tradeoff made, constraint accepted.
 
-2. For each decision that is not already documented in an existing ADR, create a stub at `docs/02-design/technical/adrs/<decision-slug>.md` using `shared/templates/adr-template.md`. Mark status as "DRAFT — architect to complete rationale."
+2. For each decision that is not already documented in an existing ADR, create a stub at `docs/02-design/technical/adrs/<decision-slug>.md` using `${CLAUDE_PLUGIN_ROOT}/shared/templates/adr-template.md`. Mark status as "DRAFT — architect to complete rationale."
 
 3. Ask the architect:
    > "I've created stubs for [N] decisions I found in the HLD. Are there decisions being made here that aren't visible in the design — things the team discussed, constraints from legal or ops, or choices you ruled out?"
@@ -397,7 +397,7 @@ Check if the change introduces any of:
 - A new ML/AI technique
 - A refactor that significantly changes how engineers reason about a subsystem
 
-If yes: create a stub at `docs/03-engineering/training/<capability>.md` using `shared/templates/training-plan-template.md`. Link to the relevant LLDs and ADRs. Mark sections as "DRAFT — architect to complete."
+If yes: create a stub at `docs/03-engineering/training/<capability>.md` using `${CLAUDE_PLUGIN_ROOT}/shared/templates/training-plan-template.md`. Link to the relevant LLDs and ADRs. Mark sections as "DRAFT — architect to complete."
 
 If no: state the reason explicitly (e.g., "No training plan required — this extends an existing pattern.").
 

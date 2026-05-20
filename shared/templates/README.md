@@ -1,4 +1,4 @@
-# shared/templates/
+# ${CLAUDE_PLUGIN_ROOT}/shared/templates/
 
 **Document scaffolds used by AI skills** — skills read these and fill them in. Humans receive the completed output, not these raw files.
 
@@ -15,4 +15,4 @@
 | `pull-request-template.md` | `/hitl:dev-conclude` |
 | `*-template.md` (others) | `/hitl:dev-generate-docs`, `/architect:*` |
 
-HLD, LLD, ADR, and CLAUDE.md templates live in `shared/templates/` — co-located with the skill that uses them.
+HLD, LLD, ADR, and CLAUDE.md templates live in `${CLAUDE_PLUGIN_ROOT}/shared/templates/` — co-located with the skill that uses them.

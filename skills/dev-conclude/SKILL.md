@@ -79,7 +79,7 @@ Do NOT proceed until the user confirms.
 If an ADR is needed:
 
 1. **Read existing ADRs** in `docs/02-design/technical/adrs/` to determine the next available number and check for related ADRs
-2. **Generate the ADR** following the template at `shared/templates/adr-template.md`:
+2. **Generate the ADR** following the template at `${CLAUDE_PLUGIN_ROOT}/shared/templates/adr-template.md`:
    - **Context** — from the thread discussion (the problem, constraints, what triggered it)
    - **Decision** — the concluded choice, with enough detail to implement
    - **Alternatives** — each rejected option with the reason from the thread
@@ -107,7 +107,7 @@ If the decision introduces a new component not in the current design, note: "Thi
 
 ## Step 5 — Create the GitHub issue
 
-Generate a GitHub issue using the issue template (`shared/templates/issue-template.md`):
+Generate a GitHub issue using the issue template (`${CLAUDE_PLUGIN_ROOT}/shared/templates/issue-template.md`):
 
 - **Title:** Action item from the decision (imperative mood)
 - **Body:**
