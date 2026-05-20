@@ -41,7 +41,9 @@ rm -rf "$PLUGIN_DIR/skills/dev" \
        "$PLUGIN_DIR/skills/architect" \
        "$PLUGIN_DIR/skills/pm" \
        "$PLUGIN_DIR/skills/qa" \
-       "$PLUGIN_DIR/skills/ops"
+       "$PLUGIN_DIR/skills/ops" \
+       "$PLUGIN_DIR/skills/hooks" \
+       "$PLUGIN_DIR/skills/shared"
 # Remove old flat dev dirs (no dev- prefix) that no longer match
 for stale_dir in \
   apply-change check-conventions conclude generate-docs \
