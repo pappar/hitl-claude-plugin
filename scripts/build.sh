@@ -26,13 +26,25 @@ echo ""
 
 # ── Skills ────────────────────────────────────────────────────────────────────
 # Source layout: ai/claude/<skill>/SKILL.md (flat for dev) or ai/claude/<role>/<skill>/SKILL.md
-# Plugin layout: skills/dev/<skill>/ for developer skills; skills/<role>/<skill>/ for role skills
-# Special remaps: dev-practices → dev/practices, migrate/review-external-docs → dev/review-external-docs
+# Plugin layout: skills/<role>-<skill>/SKILL.md (flat, one level deep)
+#   — Claude Code docs only support skills/<skill-name>/SKILL.md at depth 2;
+#     deeper nesting is not discovered as skills. All names use hyphens.
+# Mappings:
+#   dev-practices/*                → dev-practices/*         (unchanged)
+#   migrate/review-external-docs/* → dev-review-external-docs/*
+#   architect/<s>/* | pm/<s>/* | qa/<s>/* | ops/<s>/* → <role>-<s>/*
+#   <flat-dev-skill>/*             → dev-<skill>/*
 echo "Syncing skills..."
 
-# Remove stale flat dev skill dirs — they move under skills/dev/
+# Remove stale nested skill dirs from prior layout (skills/dev/, skills/architect/, etc.)
+rm -rf "$PLUGIN_DIR/skills/dev" \
+       "$PLUGIN_DIR/skills/architect" \
+       "$PLUGIN_DIR/skills/pm" \
+       "$PLUGIN_DIR/skills/qa" \
+       "$PLUGIN_DIR/skills/ops"
+# Remove old flat dev dirs (no dev- prefix) that no longer match
 for stale_dir in \
-  apply-change check-conventions conclude dev-practices generate-docs \
+  apply-change check-conventions conclude generate-docs \
   impact-brief migrate review-security start-brownfield start-migration \
   start-prd tdd; do
   rm -rf "$PLUGIN_DIR/skills/$stale_dir"
@@ -40,11 +52,17 @@ done
 
 remap_skill_path() {
   local rel="$1"
-  case "$rel" in
-    dev-practices/*)                echo "dev/practices/${rel#dev-practices/}" ;;
-    migrate/review-external-docs/*) echo "dev/review-external-docs/${rel#migrate/review-external-docs/}" ;;
-    architect/*|pm/*|qa/*|ops/*)    echo "$rel" ;;
-    *)                              echo "dev/$rel" ;;
+  local first="${rel%%/*}"   # first path component
+  local rest="${rel#*/}"     # remainder after first /
+  case "$first" in
+    dev-practices) echo "dev-practices/$rest" ;;
+    migrate)       echo "dev-review-external-docs/${rest#*/}" ;;  # drop migrate/review-external-docs prefix
+    architect|pm|qa|ops)
+      local skill="${rest%%/*}"   # role skill name
+      local file="${rest#*/}"     # file within skill dir
+      echo "${first}-${skill}/$file"
+      ;;
+    *) echo "dev-${first}/$rest" ;;  # flat dev skill → dev-<name>/
   esac
 }
 
@@ -62,22 +80,42 @@ find "$SOURCE_DIR/ai/claude" \( -name "SKILL.md" -o -name "*.md" \) \
 done
 
 # ── Commands ──────────────────────────────────────────────────────────────────
-# Source layout: ai/claude/commands/
-# Plugin layout: commands/
-# README.md is excluded (not a command).
-# Commands that have a matching skill are excluded — the skill is the canonical surface.
-# Skill lookup accounts for dev/ remapping: check skills/<name>/, skills/dev/<name>/,
-# and the dev-practices → dev/practices rename.
+# Source layout: ai/claude/commands/<role>/<name>.md (nested for organization)
+# Plugin layout: commands/<role>-<name>.md (flat — same depth constraint as skills)
+# README.md is excluded. Commands with a matching flat skill are excluded.
 echo "Syncing commands..."
+
+# Remove stale nested command subdirs from prior layout
+rm -rf "$PLUGIN_DIR/commands"/*/
 
 skill_exists_for_cmd() {
   local name="$1"
-  [[ -f "$PLUGIN_DIR/skills/$name/SKILL.md" ]] ||
-  [[ -f "$PLUGIN_DIR/skills/dev/$name/SKILL.md" ]] ||
-  { [[ "$name" == "dev-practices" ]] && [[ -f "$PLUGIN_DIR/skills/dev/practices/SKILL.md" ]]; }
+  # Direct flat skill match (e.g. dev-practices → skills/dev-practices/)
+  [[ -f "$PLUGIN_DIR/skills/$name/SKILL.md" ]] && return 0
+  if [[ "$name" == */* ]]; then
+    # Nested command: dev/conclude → skills/dev-conclude/
+    local first="${name%%/*}"
+    local rest="${name#*/}"
+    [[ -f "$PLUGIN_DIR/skills/${first}-${rest}/SKILL.md" ]] && return 0
+  else
+    # Flat command with no role prefix: conclude → skills/dev-conclude/
+    [[ -f "$PLUGIN_DIR/skills/dev-${name}/SKILL.md" ]] && return 0
+  fi
+  return 1
+}
+
+flatten_command_path() {
+  echo "${1//\//-}"
 }
 
 if [[ -d "$SOURCE_DIR/ai/claude/commands" ]]; then
+  # Compute expected flat names for stale-removal check
+  expected_flat=$(find "$SOURCE_DIR/ai/claude/commands" -name "*.md" ! -name "README.md" | \
+    while IFS= read -r s; do
+      rel="${s#$SOURCE_DIR/ai/claude/commands/}"
+      echo "${rel//\//-}"
+    done)
+
   find "$SOURCE_DIR/ai/claude/commands" -name "*.md" ! -name "README.md" | while read -r src; do
     rel="${src#$SOURCE_DIR/ai/claude/commands/}"
     name="${rel%.md}"
@@ -85,33 +123,31 @@ if [[ -d "$SOURCE_DIR/ai/claude/commands" ]]; then
     if skill_exists_for_cmd "$name"; then
       continue
     fi
-    dest="$PLUGIN_DIR/commands/$rel"
-    mkdir -p "$(dirname "$dest")"
+    flat_rel=$(flatten_command_path "$rel")
+    dest="$PLUGIN_DIR/commands/$flat_rel"
     cp "$src" "$dest"
-    echo "  commands/$rel"
+    echo "  commands/$flat_rel"
   done
-  # Remove any previously synced command that now has a matching skill
-  find "$PLUGIN_DIR/commands" -name "*.md" ! -name "README.md" | while read -r dest; do
-    rel="${dest#$PLUGIN_DIR/commands/}"
-    name="${rel%.md}"
+  # Remove any previously synced flat command that now has a matching skill
+  find "$PLUGIN_DIR/commands" -maxdepth 1 -name "*.md" ! -name "README.md" | while read -r dest; do
+    flat_rel="${dest#$PLUGIN_DIR/commands/}"
+    name="${flat_rel%.md}"
     if skill_exists_for_cmd "$name"; then
       rm "$dest"
-      echo "  removed duplicate: commands/$rel"
+      echo "  removed duplicate: commands/$flat_rel"
     fi
   done
   # Remove stale plugin commands that no longer exist in source
-  find "$PLUGIN_DIR/commands" -name "*.md" ! -name "README.md" | while read -r dest; do
-    rel="${dest#$PLUGIN_DIR/commands/}"
-    if [[ ! -f "$SOURCE_DIR/ai/claude/commands/$rel" ]]; then
+  find "$PLUGIN_DIR/commands" -maxdepth 1 -name "*.md" ! -name "README.md" | while read -r dest; do
+    flat_rel="${dest#$PLUGIN_DIR/commands/}"
+    if ! echo "$expected_flat" | grep -qxF "$flat_rel"; then
       rm "$dest"
-      echo "  removed stale: commands/$rel"
+      echo "  removed stale: commands/$flat_rel"
     fi
   done
 fi
-# README.md is not a command — remove it from the scanned commands/ directory
+# README.md is not a command — remove it if accidentally copied
 rm -f "$PLUGIN_DIR/commands/README.md"
-# Remove any empty subdirectories left over from deleted command files
-find "$PLUGIN_DIR/commands" -mindepth 1 -type d -empty -delete 2>/dev/null || true
 
 # ── Agents ────────────────────────────────────────────────────────────────────
 # Source layout: ai/claude/agents/
@@ -214,7 +250,7 @@ fi
 echo "Normalizing path references..."
 find "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" \
      "$PLUGIN_DIR/shared" \
-     -name "*.md" -o -name "*.yaml" | while read -r f; do
+     \( -name "*.md" -o -name "*.yaml" \) | while read -r f; do
   sed -i '' \
     -e 's|ai/shared/templates/|shared/templates/|g' \
     -e 's|ai/claude/generate-docs/templates/|shared/templates/|g' \
