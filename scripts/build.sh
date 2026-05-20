@@ -66,6 +66,14 @@ if [[ -d "$SOURCE_DIR/ai/claude/commands" ]]; then
       echo "  removed duplicate: commands/$rel"
     fi
   done
+  # Remove stale plugin commands that no longer exist in source
+  find "$PLUGIN_DIR/commands" -name "*.md" ! -name "README.md" | while read -r dest; do
+    rel="${dest#$PLUGIN_DIR/commands/}"
+    if [[ ! -f "$SOURCE_DIR/ai/claude/commands/$rel" ]]; then
+      rm "$dest"
+      echo "  removed stale: commands/$rel"
+    fi
+  done
 fi
 # README.md is not a command — remove it from the scanned commands/ directory
 rm -f "$PLUGIN_DIR/commands/README.md"
