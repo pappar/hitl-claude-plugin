@@ -322,12 +322,17 @@ echo "  no mangled paths found"
 
 # Validate plugin structure (frontmatter, manifest, skill layout) via the
 # canonical Claude Code validator — no extra Python dependencies required.
+# Override the binary with CLAUDE_BIN=/path/to/claude if your working claude
+# is not first on PATH (e.g. a broken wrapper shadows the real binary).
 echo "Validating plugin structure..."
-if command -v claude &>/dev/null; then
-  claude plugin validate "$PLUGIN_DIR"
+CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude 2>/dev/null || true)}"
+if [[ -n "$CLAUDE_BIN" ]]; then
+  echo "  using: $CLAUDE_BIN"
+  "$CLAUDE_BIN" plugin validate "$PLUGIN_DIR"
   echo "  plugin validation passed"
 else
   echo "  SKIP: 'claude' not on PATH — run 'claude plugin validate $PLUGIN_DIR' before release"
+  echo "  Tip:  set CLAUDE_BIN=/path/to/claude to specify the binary explicitly"
 fi
 
 echo ""
