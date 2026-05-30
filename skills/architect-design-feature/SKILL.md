@@ -10,6 +10,58 @@ disable-model-invocation: true
 
 **Refusal rule:** If no GitHub issue number is provided or discoverable, stop and say: "No GitHub issue found. Create one first with `gh issue create`, then re-run with the issue number."
 
+---
+
+## Startup — Status Router
+
+Before doing anything else, check `.hitl/current-change.yaml`:
+
+```bash
+[ -f .hitl/current-change.yaml ] && grep "^status:" .hitl/current-change.yaml || echo "status: not-found"
+```
+
+Route based on the current status:
+
+| Status | Action |
+|--------|--------|
+| File not found | Proceed normally — run from Phase 1 |
+| `planning` | Proceed normally — run from Phase 1 |
+| `awaiting-scope-approval` | Output the gate-pending message below and STOP |
+| `scope-approved` | Skip to Phase 3 (HLD) |
+| `awaiting-hld-approval` | Output the gate-pending message below and STOP |
+| `hld-approved` | Skip to Phase 5 (LLD) |
+| `awaiting-lld-approval` | Output the gate-pending message below and STOP |
+| `lld-approved` | Skip to Phase 10 (Decision Packet) |
+| `awaiting-packet-approval` | Output the gate-pending message below and STOP |
+| `implementation-approved` | Output: "Design is complete. Decision packets are ready — hand them to developers to begin `/hitl:dev-tdd`." and STOP |
+| `blocked` | Output the blocked message below and STOP |
+
+**Gate-pending message** (for any `awaiting-*` status):
+```
+Gate pending — waiting for TA approval.
+
+Status:   [current status]
+Change:   [change_id]
+
+The TA must run /hitl:ta-approve to review the current artifact and advance this gate.
+Once approved, re-run this command to continue to the next phase.
+```
+
+**Blocked message** (for `blocked` status):
+```
+This change is blocked — a gate was rejected by the TA.
+
+Gate:     [blocker.gate]
+Finding:  [blocker.finding]
+
+Address the finding above, then re-run this command. The skill will resume
+at the rejected phase so you can rework the artifact.
+```
+
+For `blocked` status: after showing the blocked message, ask the architect: "Are you ready to rework the [blocker.gate] artifact? Say 'yes' to resume." On confirmation, clear the `blocked` status and route to the appropriate phase to re-do that work.
+
+---
+
 **Graphify pre-flight:** Before the first step, run:
 ```bash
 [ -f graphify-out/graph.json ] && echo "Graphify: available" || echo "Graphify: unavailable"
@@ -54,7 +106,7 @@ Before reading the manifest or doing any analysis, challenge the issue against i
 
 1. **Is the problem statement specific?** If the issue says "users want X" or "improve Y" without data, ask: "What evidence supports this — support tickets, analytics, churn feedback, user research?" For migration: "What in the migration brief or external reference docs supports this slice being needed now?"
 2. **Are the acceptance criteria testable?** Vague AC ("should feel fast", "user-friendly") cannot drive an LLD or tests. Ask for specific, measurable criteria before proceeding.
-3. **Are NFRs relevant to this change stated?** If the change affects throughput, latency, or availability, are the targets in the issue or findable in the requirements source? If not, ask — see `${CLAUDE_PLUGIN_ROOT}/shared/challenge-stance.md` for the full NFR checklist.
+3. **Are NFRs relevant to this change stated?** If the change affects throughput, latency, or availability, are the targets in the issue or findable in the requirements source? If not, ask — see `shared/challenge-stance.md` for the full NFR checklist.
 4. **Is the proposed solution the right solution?** State the problem, then ask: "Is there a simpler approach that would solve the same problem?" If yes, name it and the tradeoff before designing the proposed solution.
 
 If any answer is unsatisfactory, resolve it now — not after the HLD is generated.
@@ -88,7 +140,7 @@ If backwards-incompatible changes are identified, flag them explicitly. Do not p
 
 ### 1e. Determine the tier
 
-Use the tier definitions from `${CLAUDE_PLUGIN_ROOT}/skills/dev-practices/SKILL.md`. State the tier with justification.
+Use the tier definitions from `skills/dev-practices/SKILL.md`. State the tier with justification.
 
 **Challenge the tier before accepting it:**
 - Cross-domain or multi-service changes are Tier 3 even when described as simple
@@ -99,7 +151,7 @@ Use the tier definitions from `${CLAUDE_PLUGIN_ROOT}/skills/dev-practices/SKILL.
 
 Estimate implementation effort (in days) based on the number of affected domains, facade API changes, and IaC scope. This determines whether step 4 (ROI) is required.
 
-For token cost estimation, use the phase-level formula from `${CLAUDE_PLUGIN_ROOT}/skills/dev-practices/roi-estimation.md`.
+For token cost estimation, use the phase-level formula from `skills/dev-practices/roi-estimation.md`.
 
 ### 1g. Initialize `.hitl/current-change.yaml`
 
@@ -132,12 +184,30 @@ Incident history:     [relevant incidents or "none found"]
 ROI required:         [yes — effort > 1 day / no]
 ```
 
-**STOP. Ask the architect:**
-- "Are the domain boundaries correct?"
-- "Any scope I missed or over-counted?"
-- "Confirm tier [N]?"
+Update `.hitl/current-change.yaml`: set `status: awaiting-scope-approval`.
 
-Do not proceed until the architect confirms.
+Post a GitHub issue comment:
+```bash
+gh issue comment <issue-number> \
+  --body "## ⏸ Gate: Scope Review
+
+Impact analysis complete. Awaiting TA approval before HLD generation begins.
+
+**Tier:** [N] | **Effort:** [N days] | **Domains:** [list]
+**Backwards compat:** [compatible / incompatible — details]
+
+Run \`/hitl:ta-approve\` to review and advance this gate."
+```
+
+Output:
+```
+Gate 1 reached — status set to 'awaiting-scope-approval'.
+
+The TA must run /hitl:ta-approve to confirm scope before HLD generation begins.
+Re-run /hitl:architect-design-feature after TA approval to continue.
+```
+
+**STOP. Do not generate any further content. This session ends here.**
 
 ---
 
@@ -145,7 +215,7 @@ Do not proceed until the architect confirms.
 
 If effort estimate exceeds 1 day:
 
-Record the ROI section in `.hitl/current-change.yaml` under `roi_estimate` using the template in `${CLAUDE_PLUGIN_ROOT}/skills/dev-practices/roi-estimation.md`. Fill in:
+Record the ROI section in `.hitl/current-change.yaml` under `roi_estimate` using the template in `skills/dev-practices/roi-estimation.md`. Fill in:
 - Value dimension
 - Expected outcome (specific, falsifiable, with timeframe)
 - Baseline metric placeholder (note: architect must measure this now, not estimate it)
@@ -180,27 +250,30 @@ For Tier 2 and above:
 
 3. Update `source_artifacts.hld` in `.hitl/current-change.yaml`.
 
-**STOP. Ask the architect:**
-> "HLD is ready for your review. Specifically check:
-> 1. Are the component boundaries right?
-> 2. Are there design decisions in here that need an ADR?
-> 3. Is the security model correct?
->
-> Say **"HLD approved"** to proceed to ADRs and LLD."
+Update `.hitl/current-change.yaml`: set `status: awaiting-hld-approval`.
 
-Do not generate LLDs until the architect explicitly approves the HLD.
-
-After the architect says "HLD approved", post a comment on the GitHub issue from Step 1:
+Post a GitHub issue comment:
 ```bash
 gh issue comment <issue-number> \
-  --body "## ✅ HLD Approved
+  --body "## ⏸ Gate: HLD Review
 
-High-Level Design reviewed and approved by architect.
+High-Level Design is ready for TA review.
 
 **HLD:** \`docs/02-design/technical/hld/<feature-name>.md\`
 
-Proceeding to ADRs and LLD generation."
+Run \`/hitl:ta-approve\` to review and advance this gate. The TA checklist covers:
+component boundaries, security model, ADR candidates, and implementation bias."
 ```
+
+Output:
+```
+Gate 2 reached — status set to 'awaiting-hld-approval'.
+
+The TA must run /hitl:ta-approve to review the HLD before LLD generation begins.
+Re-run /hitl:architect-design-feature after TA approval to continue.
+```
+
+**STOP. Do not generate ADRs or LLDs. This session ends here.**
 
 For Tier 0–1: skip this phase.
 
@@ -212,7 +285,7 @@ After HLD approval:
 
 1. From the approved HLD, identify every design decision — framework choice, pattern selection, tradeoff made, constraint accepted.
 
-2. For each decision that is not already documented in an existing ADR, create a stub at `docs/02-design/technical/adrs/<decision-slug>.md` using `${CLAUDE_PLUGIN_ROOT}/shared/templates/adr-template.md`. Mark status as "DRAFT — architect to complete rationale."
+2. For each decision that is not already documented in an existing ADR, create a stub at `docs/02-design/technical/adrs/<decision-slug>.md` using `shared/templates/adr-template.md`. Mark status as "DRAFT — architect to complete rationale."
 
 3. Ask the architect:
    > "I've created stubs for [N] decisions I found in the HLD. Are there decisions being made here that aren't visible in the design — things the team discussed, constraints from legal or ops, or choices you ruled out?"
@@ -237,29 +310,33 @@ For each affected domain identified in Phase 1:
 
 2. Update `docs/02-design/technical/lld/index.md`.
 
-3. For each LLD, ask the architect:
-   > "LLD for [domain] is ready. Before approving, check:
-   > 1. Are the method signatures precise enough that a developer could generate tests directly from this?
-   > 2. Are the preconditions and error modes complete?
-   > 3. Does this correctly reflect the decisions in the HLD?
-   >
-   > Say **"[domain] LLD approved"** to continue."
+3. After each LLD is written, update `source_artifacts.lld` in `.hitl/current-change.yaml`.
 
-4. After each LLD is approved, update `source_artifacts.lld` in `.hitl/current-change.yaml`.
+4. After ALL domain LLDs are written, update `.hitl/current-change.yaml`: set `status: awaiting-lld-approval`.
 
-Do not proceed to slice decomposition until all LLDs are approved.
-
-After all domain LLDs are approved, post a comment on the GitHub issue:
+Post a GitHub issue comment:
 ```bash
 gh issue comment <issue-number> \
-  --body "## ✅ LLDs Approved
+  --body "## ⏸ Gate: LLD Review
 
-Low-Level Designs reviewed and approved for all affected domains: <domain list>.
+Low-Level Designs are ready for TA review.
 
+**Domains:** <domain list>
 **LLD(s):** \`docs/02-design/technical/lld/...\`
 
-Proceeding to slice decomposition and test planning."
+Run \`/hitl:ta-approve\` to review and advance this gate. The TA checklist covers:
+method signature precision, error modes completeness, HLD alignment, and slice demo answers."
 ```
+
+Output:
+```
+Gate 3 reached — status set to 'awaiting-lld-approval'.
+
+The TA must run /hitl:ta-approve to review the LLD(s) before slice decomposition begins.
+Re-run /hitl:architect-design-feature after TA approval to continue.
+```
+
+**STOP. Do not begin slice decomposition. This session ends here.**
 
 ---
 
@@ -397,7 +474,7 @@ Check if the change introduces any of:
 - A new ML/AI technique
 - A refactor that significantly changes how engineers reason about a subsystem
 
-If yes: create a stub at `docs/03-engineering/training/<capability>.md` using `${CLAUDE_PLUGIN_ROOT}/shared/templates/training-plan-template.md`. Link to the relevant LLDs and ADRs. Mark sections as "DRAFT — architect to complete."
+If yes: create a stub at `docs/03-engineering/training/<capability>.md` using `shared/templates/training-plan-template.md`. Link to the relevant LLDs and ADRs. Mark sections as "DRAFT — architect to complete."
 
 If no: state the reason explicitly (e.g., "No training plan required — this extends an existing pattern.").
 
@@ -479,33 +556,36 @@ Update `.hitl/current-change.yaml`:
 - Set `status: design-review`
 - Set `approvals.architecture: pending`
 
-**STOP. For each packet, ask the architect:**
-> "Decision packet for slice [M] (domain: [domain]) is ready. Check:
-> 1. Is the domain scope correctly limited to one domain?
-> 2. Is the LLD path correct?
-> 3. Is the test plan complete enough to hand to a developer?
-> 4. Is the rollout strategy risk level right?
->
-> Say **"packet [M] approved"** to continue."
+After all packets are assembled, update `.hitl/current-change.yaml`: set `status: awaiting-packet-approval`.
 
-After all packets are approved:
-- Set `approvals.architecture: approved` in `.hitl/current-change.yaml`
-- Update `status: implementation-approved`
-
-Post a comment on the GitHub issue signalling the feature is ready for development:
+Post a GitHub issue comment:
 ```bash
 gh issue comment <issue-number> \
-  --body "## ✅ Architecture Approved — Ready for Development
+  --body "## ⏸ Gate: Decision Packet Review
 
-Design complete. Decision packet(s) assembled and approved by architect.
+Decision packet(s) assembled and awaiting TA + PM approval.
 
 **Slices:** <slice plan from Phase 7>
 **Decision packet(s):** \`docs/decisions/issue-<N>...\`
 **Estimated effort:** <N days>
 **Rollout risk:** <level>
 
-Developers can begin implementation. Run \`/hitl:dev-tdd\` with the assigned LLD."
+Run \`/hitl:ta-approve\` to review and advance this gate. The TA checklist covers:
+domain scope, LLD path, test plan completeness, rollout risk, and PM sign-off."
 ```
+
+Output:
+```
+Gate 4 reached — status set to 'awaiting-packet-approval'.
+
+The TA (and PM) must run /hitl:ta-approve to approve the decision packet(s).
+Once approved, status will advance to 'implementation-approved' and developers
+can begin /hitl:dev-tdd.
+
+This session ends here.
+```
+
+**STOP. Do not set implementation-approved. This session ends here.**
 
 ---
 
