@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "hitl",
+  "description": "HITL AI-Driven Development plugin marketplace",
+  "owner": { "name": "pappar" },
+  "plugins": [
+    {
+      "name": "hitl",
+      "description": "HITL AI-Driven Development. 40 skills, 6 agents, enforcement hooks, and templates for the full 32-step delivery workflow.",
+      "author": { "name": "pappar" },
+      "category": "productivity",
+      "source": {
+        "source": "github",
+        "repo": "pappar/hitl-claude-plugin",
+        "commit": "ff517e16401645b0dd6245f321c2877a117dc6c4"
+      },
+      "homepage": "https://github.com/pappar/hitl-claude-plugin"
+    }
+  ]
+}

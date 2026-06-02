@@ -5,14 +5,20 @@ A [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugin for the *
 ## Install
 
 ```bash
-claude plugin install pappar/hitl-claude-plugin
+claude plugin marketplace add pappar/hitl-claude-plugin
+claude plugin install hitl@hitl
 ```
+
+The first command registers the HITL marketplace from the plugin repo. The second installs the plugin from it.
 
 ## Update
 
 ```bash
-claude plugin update hitl-claude-plugin
+claude plugin marketplace add pappar/hitl-claude-plugin
+claude plugin install hitl@hitl
 ```
+
+Re-running install after re-adding the marketplace picks up the latest commit SHA.
 
 ## What you get
 
