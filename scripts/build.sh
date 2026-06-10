@@ -270,6 +270,10 @@ if [[ -f "$SOURCE_DIR/ai/shared/challenge-stance.md" ]]; then
   cp "$SOURCE_DIR/ai/shared/challenge-stance.md" "$PLUGIN_DIR/shared/challenge-stance.md"
   echo "  shared/challenge-stance.md"
 fi
+if [[ -f "$SOURCE_DIR/CHANGELOG.md" ]]; then
+  cp "$SOURCE_DIR/CHANGELOG.md" "$PLUGIN_DIR/CHANGELOG.md"
+  echo "  CHANGELOG.md"
+fi
 
 # ── Normalize internal paths ──────────────────────────────────────────────────
 # Two-pass rewrite (idempotent):
