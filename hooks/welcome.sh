@@ -70,7 +70,7 @@ if [[ -f "$HITL_FILE" ]] && grep -q "^current_step:" "$HITL_FILE" 2>/dev/null; t
 fi
 
 # No active change — show static startup menu once per session
-SESSION_MARKER="/tmp/hitl-welcomed-${PPID}"
+SESSION_MARKER="${TMPDIR:-${TMP:-/tmp}}/hitl-welcomed-${PPID}"
 [[ -f "$SESSION_MARKER" ]] && exit 0
 touch "$SESSION_MARKER"
 
@@ -79,9 +79,9 @@ cat << 'BANNER'
   HITL AI-Driven Development — platform active
 
   Start a project:
-    /hitl:dev-start-prd          new project from a PRD
-    /hitl:dev-start-brownfield   onboard an existing codebase
-    /hitl:dev-start-migration    migrate from one system to another
+    /hitl:start-prd          new project from a PRD
+    /hitl:start-brownfield   onboard an existing codebase
+    /hitl:start-migration    migrate from one system to another
 
   Run a change:
     /hitl:dev-practices      begin a new change (full 32-step workflow)

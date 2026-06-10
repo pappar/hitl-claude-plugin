@@ -37,7 +37,7 @@ Route based on the current status:
 | `awaiting-lld-approval` | Output the gate-pending message and STOP |
 | `lld-approved` | Skip to Phase 8 (Delivery Plan) |
 | `awaiting-delivery-plan` | Output the gate-pending message and STOP |
-| `complete` | Output: "System design is complete. Decision packets are ready — assign them to developers to begin `/hitl:dev-tdd`." and STOP |
+| `complete` | Output: "System design is complete. Decision packets are ready — assign them to developers to begin `/hitl:tdd`." and STOP |
 | `blocked` | Output the blocked message and STOP |
 
 **Gate-pending message** (for any `awaiting-*` status):
@@ -106,7 +106,7 @@ Extract and summarize:
 
 #### NFR interrogation — mandatory if absent or vague in the PRD
 
-Run through the full NFR checklist in `shared/challenge-stance.md` (Minimum NFR Checklist section). For each NFR that is absent or vague in the PRD, ask the architect or PM now.
+Run through the full NFR checklist in `${CLAUDE_PLUGIN_ROOT}/shared/challenge-stance.md` (Minimum NFR Checklist section). For each NFR that is absent or vague in the PRD, ask the architect or PM now.
 
 **One rule for unresolvable NFRs:** Ask first. If the answer cannot be obtained (early-stage project, no stakeholder available), make a stated assumption with a specific number and record it as a design risk in the gate below — do not leave it unnamed. "We don't know yet" embedded silently in an architecture is far more dangerous than an explicit assumption the team can challenge and update.
 
@@ -197,7 +197,7 @@ Re-run /hitl:architect-design-system after TA approval to continue.
 
 ## Phase 3 — System Manifest
 
-Generate `docs/system-manifest.yaml` from the confirmed domain breakdown. Follow the schema in `shared/templates/system-manifest.schema.yaml`.
+Generate `docs/system-manifest.yaml` from the confirmed domain breakdown. Follow the schema in `${CLAUDE_PLUGIN_ROOT}/shared/templates/system-manifest.schema.yaml`.
 
 For a greenfield system, apply these rules per domain:
 - `files` and `tests`: empty arrays — no code exists yet
@@ -247,7 +247,7 @@ Ask the architect: "Which of these are already decided by your organization? Whi
 
 ### 4b. Create ADR stubs
 
-For each decision (decided or open), create `docs/02-design/technical/adrs/<decision-slug>.md` using `shared/templates/adr-template.md`.
+For each decision (decided or open), create `docs/02-design/technical/adrs/<decision-slug>.md` using `${CLAUDE_PLUGIN_ROOT}/shared/templates/adr-template.md`.
 
 For decisions already made: pre-fill `Status: Accepted`, `Decision` section, ask architect to fill in the `Rationale` (the why — what alternatives were considered and why this won).
 
@@ -263,7 +263,7 @@ On confirmation, update `.hitl/design-system.yaml`: set `status: manifest-confir
 
 ## Phase 5 — System-Level HLDs
 
-Generate the following HLDs using `shared/templates/hld-template.md`. Each must read from the confirmed manifest and ADRs — not from memory or general reasoning.
+Generate the following HLDs using `${CLAUDE_PLUGIN_ROOT}/shared/templates/hld-template.md`. Each must read from the confirmed manifest and ADRs — not from memory or general reasoning.
 
 **Always generate:**
 
@@ -323,7 +323,7 @@ Re-run /hitl:architect-design-system after TA approval to continue.
 
 ## Phase 6 — Domain-Level LLDs
 
-For each domain in the confirmed manifest, generate a LLD at `docs/02-design/technical/lld/<domain>/<domain>.md` using `shared/templates/lld-component-template.md`.
+For each domain in the confirmed manifest, generate a LLD at `docs/02-design/technical/lld/<domain>/<domain>.md` using `${CLAUDE_PLUGIN_ROOT}/shared/templates/lld-component-template.md`.
 
 For each LLD:
 - Propose the internal structure (services, classes, data models) that would implement the domain's `facade_apis` and satisfy the use cases from Phase 1 that this domain owns
@@ -358,11 +358,11 @@ Re-run /hitl:architect-design-system after TA approval to continue.
 
 Follow the instructions in Phase R5 of the `generate-docs` skill exactly. This sets up the process infrastructure:
 
-1. **Generate `CLAUDE.md`** from `shared/templates/CLAUDE.md.template` — inline the cross-cutting conventions from the ADRs and manifest
+1. **Generate `CLAUDE.md`** from `${CLAUDE_PLUGIN_ROOT}/shared/templates/CLAUDE.md.template` — inline the cross-cutting conventions from the ADRs and manifest
 2. **Generate `convention-checks.yaml`** — create checks from the conventions established in Phase 4 ADRs
-3. **Install the plugin or copy skills** — so `/architect/design-feature`, `/hitl:dev-tdd`, `/hitl:dev-generate-docs`, etc. are available
+3. **Install the plugin or copy skills** — so `/architect/design-feature`, `/hitl:tdd`, `/hitl:generate-docs`, etc. are available
 4. **Copy CI actions** to `.github/workflows/`
-5. **Generate `.github/ISSUE_TEMPLATE/technical-change.md`** from `shared/templates/issue-template.md`
+5. **Generate `.github/ISSUE_TEMPLATE/technical-change.md`** from `${CLAUDE_PLUGIN_ROOT}/shared/templates/issue-template.md`
 6. **Set up Graphify** — for systems with 4+ domains, the doc set produced by this session will exceed context window limits on future queries. Install before team onboarding (see `shared/graphify-setup.md` for full instructions):
    ```bash
    uv tool install graphifyy        # install once per machine
@@ -457,7 +457,7 @@ source_docs:
 
 tests:
   plan: "<key scenarios from facade APIs in the LLD>"
-  new_tests: []                   # developer fills in during /hitl:dev-tdd
+  new_tests: []                   # developer fills in during /hitl:tdd
   registry_updated: false
 
 incidents:
@@ -521,7 +521,7 @@ Present a completion summary:
 │  2. Assign decision packets to developers           │
 │     — each developer receives one packet and runs   │
 │       the standard 32-step workflow from it         │
-│  3. Run /hitl:dev-generate-docs reverse-engineer after the   │
+│  3. Run /hitl:generate-docs reverse-engineer after the   │
 │     first sprint to reconcile design vs. built      │
 └─────────────────────────────────────────────────────┘
 ```

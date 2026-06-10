@@ -8,7 +8,57 @@ disable-model-invocation: true
 
 Setting up a new greenfield project for HITL AI-Driven Development. Work through these steps in order — pause after each and wait for confirmation before proceeding.
 
-**Quick sanity check:** If this codebase already has substantial source code, you likely want `/hitl:dev-start-brownfield` instead. If you are migrating from one system to another, use `/hitl:dev-start-migration`. Say so if either applies.
+**Quick sanity check:** If this codebase already has substantial source code, you likely want `/hitl:start-brownfield` instead. If you are migrating from one system to another, use `/hitl:start-migration`. Say so if either applies.
+
+---
+
+## Step 0 — Wire up HITL hooks (once per project)
+
+Check whether `.hitl/hooks/` already exists. If it does, say "Hooks already wired — skipping." and proceed to Step 1.
+
+If not:
+
+1. Find the HITL platform path:
+   ```bash
+   python3 -c "
+   import json, os, sys
+   cfg = os.path.expanduser('~/.claude/settings.json')
+   try:
+       data = json.load(open(cfg))
+       for p in data.get('plugins', []):
+           path = p if isinstance(p, str) else p.get('path', '')
+           if os.path.isfile(os.path.join(path, 'ai/claude/plugin/plugin.json')):
+               print(path); sys.exit(0)
+   except: pass
+   print('NOT_FOUND')
+   "
+   ```
+   If the result is `NOT_FOUND`, stop and say: "The HITL plugin was not found in your Claude Code settings. Confirm it was installed with `claude plugin add /path/to/hitl-dev-platform`."
+
+2. Create `.hitl/hooks/` and write a wrapper for each of these six hooks: `welcome`, `check-hitl-context`, `check-domain-boundary`, `rebuild-graph`, `write-session-summary`, `sync-step-to-issue`. Each wrapper is:
+   ```bash
+   #!/usr/bin/env bash
+   exec bash "${HITL_PLATFORM_ROOT:-<platform-path>}/ai/claude/hooks/<name>.sh" "$@"
+   ```
+   Replace `<platform-path>` with the path found above and `<name>` with the hook name. Run `chmod 750` on each file.
+
+3. Create `.claude/settings.json` only if it does not already exist:
+   ```json
+   {
+     "hooks": {
+       "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "bash .hitl/hooks/welcome.sh" }] }],
+       "PreToolUse": [{ "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "bash .hitl/hooks/check-hitl-context.sh" }] }],
+       "PostToolUse": [{ "matcher": "Edit|Write", "hooks": [
+         { "type": "command", "command": "bash .hitl/hooks/check-domain-boundary.sh" },
+         { "type": "command", "command": "bash .hitl/hooks/rebuild-graph.sh" },
+         { "type": "command", "command": "bash .hitl/hooks/sync-step-to-issue.sh" }
+       ]}],
+       "Stop": [{ "hooks": [{ "type": "command", "command": "bash .hitl/hooks/write-session-summary.sh" }] }]
+     }
+   }
+   ```
+
+4. Say: "Hooks wired. `.hitl/hooks/` and `.claude/settings.json` created. **Restart Claude Code now** so the hooks load, then re-run this command to continue setup."
 
 ---
 

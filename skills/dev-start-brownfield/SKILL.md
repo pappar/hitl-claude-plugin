@@ -8,7 +8,57 @@ disable-model-invocation: true
 
 Bringing an existing codebase into HITL AI-Driven Development. Work through these steps in order — pause after each and wait for confirmation before proceeding.
 
-**Quick sanity check:** If this is a brand-new project with no source code, use `/hitl:dev-start-prd` instead. If you are migrating from one system to another (not just onboarding what exists), use `/hitl:dev-start-migration`.
+**Quick sanity check:** If this is a brand-new project with no source code, use `/hitl:start-prd` instead. If you are migrating from one system to another (not just onboarding what exists), use `/hitl:start-migration`.
+
+---
+
+## Step 0 — Wire up HITL hooks (once per project)
+
+Check whether `.hitl/hooks/` already exists. If it does, say "Hooks already wired — skipping." and proceed to Step 1.
+
+If not:
+
+1. Find the HITL platform path:
+   ```bash
+   python3 -c "
+   import json, os, sys
+   cfg = os.path.expanduser('~/.claude/settings.json')
+   try:
+       data = json.load(open(cfg))
+       for p in data.get('plugins', []):
+           path = p if isinstance(p, str) else p.get('path', '')
+           if os.path.isfile(os.path.join(path, 'ai/claude/plugin/plugin.json')):
+               print(path); sys.exit(0)
+   except: pass
+   print('NOT_FOUND')
+   "
+   ```
+   If the result is `NOT_FOUND`, stop and say: "The HITL plugin was not found in your Claude Code settings. Confirm it was installed with `claude plugin add /path/to/hitl-dev-platform`."
+
+2. Create `.hitl/hooks/` and write a wrapper for each of these six hooks: `welcome`, `check-hitl-context`, `check-domain-boundary`, `rebuild-graph`, `write-session-summary`, `sync-step-to-issue`. Each wrapper is:
+   ```bash
+   #!/usr/bin/env bash
+   exec bash "${HITL_PLATFORM_ROOT:-<platform-path>}/ai/claude/hooks/<name>.sh" "$@"
+   ```
+   Replace `<platform-path>` with the path found above and `<name>` with the hook name. Run `chmod 750` on each file.
+
+3. Create `.claude/settings.json` only if it does not already exist:
+   ```json
+   {
+     "hooks": {
+       "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "bash .hitl/hooks/welcome.sh" }] }],
+       "PreToolUse": [{ "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "bash .hitl/hooks/check-hitl-context.sh" }] }],
+       "PostToolUse": [{ "matcher": "Edit|Write", "hooks": [
+         { "type": "command", "command": "bash .hitl/hooks/check-domain-boundary.sh" },
+         { "type": "command", "command": "bash .hitl/hooks/rebuild-graph.sh" },
+         { "type": "command", "command": "bash .hitl/hooks/sync-step-to-issue.sh" }
+       ]}],
+       "Stop": [{ "hooks": [{ "type": "command", "command": "bash .hitl/hooks/write-session-summary.sh" }] }]
+     }
+   }
+   ```
+
+4. Say: "Hooks wired. `.hitl/hooks/` and `.claude/settings.json` created. **Restart Claude Code now** so the hooks load, then re-run this command to continue setup."
 
 ---
 
@@ -49,8 +99,8 @@ If a real manifest already exists, read it, summarize the domains, and ask: "Is 
 Ask: "Which components are most critical and most likely to change in the near term? List up to three."
 
 For each component:
-- Say: "I'll generate an HLD and LLD for [component]. Run `/hitl:dev-generate-docs` or I can do it now — which do you prefer?"
-- If they want it now, run `/hitl:dev-generate-docs` for that component.
+- Say: "I'll generate an HLD and LLD for [component]. Run `/hitl:generate-docs` or I can do it now — which do you prefer?"
+- If they want it now, run `/hitl:generate-docs` for that component.
 - Note: this is incremental — you do not need to document everything before starting work.
 
 ---
@@ -113,11 +163,11 @@ Output this exactly:
 ---
 **Brownfield baseline established.**
 
-You are starting incrementally: manifest and priority component docs exist, registries are seeded. Undocumented components will need their LLDs created when you first change them — run `/hitl:dev-generate-docs` for that component, then resume.
+You are starting incrementally: manifest and priority component docs exist, registries are seeded. Undocumented components will need their LLDs created when you first change them — run `/hitl:generate-docs` for that component, then resume.
 
 **What this means for your first changes:**
 - Treat AI output from steps 5, 10, and 14 as drafts — the docs are new and may not yet reflect actual behavior. Increase human review scrutiny until the docs have been corrected through real use.
-- If `/hitl:dev-practices` stops with "no LLD found" on an undocumented component, run `/hitl:dev-generate-docs` for that component, then resume. This friction decreases naturally as each component gets its first doc pass through real use.
+- If `/hitl:dev-practices` stops with "no LLD found" on an undocumented component, run `/hitl:generate-docs` for that component, then resume. This friction decreases naturally as each component gets its first doc pass through real use.
 
 For every change going forward:
 1. Create a GitHub issue — or use `/hitl:pm-add-feature` / `/hitl:pm-design-feature` to shape requirements first
