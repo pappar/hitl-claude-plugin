@@ -59,6 +59,7 @@ remap_skill_path() {
   case "$first" in
     dev-practices) echo "dev-practices/$rest" ;;
     migrate)       echo "dev-review-external-docs/${rest#*/}" ;;  # drop migrate/review-external-docs prefix
+    ta-approve)    echo "ta-approve/$rest" ;;  # TA role — keep prefix as-is
     architect|pm|qa|ops)
       local skill="${rest%%/*}"   # role skill name
       local file="${rest#*/}"     # file within skill dir
