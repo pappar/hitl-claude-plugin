@@ -167,6 +167,20 @@ git push
 
 The same source can be used to build plugins for other AI platforms (e.g. Codex) by following the same build pattern with a platform-specific manifest and hooks.
 
+## Known Limitations
+
+**`/hitl:*` commands appear in the palette in all projects.** Claude Code does not yet support per-project plugin skill visibility — skills from a user-scoped plugin are global. All non-setup skills exit immediately with a setup prompt if run outside a HITL project, so nothing unexpected happens, but the commands remain visible everywhere.
+
+Project-scoped install (`claude plugin install hitl@hitl --scope project`) would solve this but has active bugs in Claude Code:
+
+| Upstream issue | Description |
+|---|---|
+| [anthropics/claude-code#60512](https://github.com/anthropics/claude-code/issues/60512) | `enabledPlugins` silently ignored when Claude Code launches from a subdirectory |
+| [anthropics/claude-code#61866](https://github.com/anthropics/claude-code/issues/61866) | Project-scoped plugins not auto-enabled in git worktrees |
+| [anthropics/claude-code#14202](https://github.com/anthropics/claude-code/issues/14202) | Project-scoped plugins incorrectly detected as installed globally |
+
+Tracked in [pappar/hitl-claude-plugin#5](https://github.com/pappar/hitl-claude-plugin/issues/5). The README and docs will be updated to recommend `--scope project` once those bugs are resolved.
+
 ## License
 
 MIT
