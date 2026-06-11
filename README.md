@@ -32,6 +32,18 @@ Once installed, update from inside Claude Code:
 
 Do not re-run the install commands to update.
 
+## What happens when you install
+
+The plugin installs at the user level. Here's exactly what that means:
+
+**What is global (affects all projects):**
+- `/hitl:*` commands appear in Claude Code's command palette in every project. This is a current limitation of how Claude Code loads plugin skills — there is no per-project skill visibility yet. If you run a HITL command in a project that hasn't been set up, the skill detects the missing `.hitl/` directory, outputs a setup prompt, and stops — it does nothing else.
+
+**What is per-project (opt-in only):**
+- Enforcement hooks only fire in projects where you ran a start skill. Hooks are wired into `.hitl/hooks/` and `.claude/settings.json` inside the project directory. No `.hitl/` directory means no hooks, no banner, no HITL activity of any kind in that project.
+
+**Net result:** Installing adds commands to your palette. Nothing enforces anything or injects output into any project until you opt that project in.
+
 ## What you get
 
 | Component | Contents |
@@ -83,6 +95,33 @@ If your setup is broken (stale clone paths, missing hooks):
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/pappar/hitl-claude-plugin/main/scripts/reinstall.sh)
 ```
+
+## Opting a project out
+
+To stop HITL from running in a specific project, remove the two things Step 0 created:
+
+```bash
+# Remove hook wiring — hooks stop firing immediately
+rm -rf .hitl/hooks/
+rm .claude/settings.json   # or edit to remove the "hooks" block if you have other hooks
+
+# Optionally remove all HITL tracking files
+rm -rf .hitl/
+```
+
+Other opted-in projects are unaffected.
+
+## Removing the plugin entirely
+
+```bash
+# 1. Uninstall
+claude plugin uninstall hitl@hitl
+
+# 2. Clean up opted-in projects (repeat for each)
+rm -rf .hitl/hooks/ .claude/settings.json .hitl/
+```
+
+Restart Claude Code after uninstalling. The `/hitl:*` commands disappear from the palette.
 
 ## Documentation
 
