@@ -16,7 +16,7 @@
       "source": {
         "source": "github",
         "repo": "pappar/hitl-claude-plugin",
-        "commit": "75e64a6dae7897652cf35064931861fd48ce688c"
+        "commit": "32700a06f83d9c7709014db4baf18884c24c68bd"
       },
       "homepage": "https://github.com/pappar/hitl-claude-plugin"
     }
