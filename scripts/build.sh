@@ -353,29 +353,9 @@ else
   echo "  Tip:  set CLAUDE_BIN=/path/to/claude to specify the binary explicitly"
 fi
 
-# ── Update marketplace.json commit SHA ───────────────────────────────────────
-# Keeps the installable commit pointer in sync with the current HEAD so
-# `claude plugin marketplace add pappar/hitl-claude-plugin` always resolves
-# to the version that was just built.
-MARKETPLACE_JSON="$PLUGIN_DIR/.claude-plugin/marketplace.json"
-if [[ -f "$MARKETPLACE_JSON" ]]; then
-  CURRENT_SHA=$(git -C "$PLUGIN_DIR" rev-parse HEAD 2>/dev/null || true)
-  if [[ -n "$CURRENT_SHA" ]]; then
-    python3 - "$MARKETPLACE_JSON" "$CURRENT_SHA" <<'PYEOF'
-import json, sys
-path, sha = sys.argv[1], sys.argv[2]
-with open(path) as f:
-    data = json.load(f)
-for plugin in data.get("plugins", []):
-    if "source" in plugin:
-        plugin["source"]["commit"] = sha
-with open(path, "w") as f:
-    json.dump(data, f, indent=2)
-    f.write("\n")
-PYEOF
-    echo "  .claude-plugin/marketplace.json commit → $CURRENT_SHA"
-  fi
-fi
+# NOTE: marketplace.json source.commit is NOT updated here.
+# Updating it before the build commit exists would pin to the previous HEAD.
+# Run scripts/release.sh after committing to update the pin and create the tag.
 
 echo ""
 echo "Build complete."

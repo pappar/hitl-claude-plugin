@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "hitl",
-      "description": "HITL AI-Driven Development. 40 skills, 6 agents, enforcement hooks, and templates for the full 32-step delivery workflow.",
+      "description": "HITL AI-Driven Development. 48 skills, 6 agents, enforcement hooks, and templates for the full 32-step delivery workflow.",
       "author": {
         "name": "pappar"
       },
