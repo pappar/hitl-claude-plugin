@@ -115,7 +115,50 @@ else
   ok ".claude/settings.json not present — nothing to remove"
 fi
 
-# ── Step 4: Install latest plugin via marketplace ──────────────────────────
+# ── Step 4: Bust plugin catalog cache ─────────────────────────────────────
+# The catalog cache (plugin-catalog-cache.json) can hold a stale marketplace_sha
+# for days, causing `claude plugin update` to see the old commit and skip the
+# update silently. Deleting it forces Claude Code to fetch a fresh catalog.
+info "Clearing plugin catalog cache..."
+CATALOG_CACHE="$HOME/.claude/plugins/plugin-catalog-cache.json"
+if [[ -f "$CATALOG_CACHE" ]]; then
+  rm -f "$CATALOG_CACHE"
+  ok "Deleted plugin-catalog-cache.json (will re-fetch on next plugin command)"
+else
+  ok "No catalog cache found — nothing to clear"
+fi
+
+# Remove stale hitl marketplace entries pointing at local/tmp paths.
+# These were registered by earlier dev installs and will never resolve to the
+# latest release. The fresh `marketplace add` below registers the correct source.
+MARKETPLACES_FILE="$HOME/.claude/plugins/known_marketplaces.json"
+if [[ -f "$MARKETPLACES_FILE" ]]; then
+  REMOVED_MKT=$(python3 - "$MARKETPLACES_FILE" <<'PYEOF'
+import json, sys
+path = sys.argv[1]
+with open(path) as f:
+    data = json.load(f)
+stale = [k for k, v in data.items()
+         if 'hitl' in k.lower()
+         and v.get('source', {}).get('source') in ('directory', 'local')]
+for k in stale:
+    del data[k]
+    print(k)
+with open(path, 'w') as f:
+    json.dump(data, f, indent=2)
+    f.write('\n')
+PYEOF
+  )
+  if [[ -n "$REMOVED_MKT" ]]; then
+    while IFS= read -r entry; do
+      ok "Removed stale local marketplace entry: $entry"
+    done <<< "$REMOVED_MKT"
+  else
+    ok "No stale local hitl marketplace entries found"
+  fi
+fi
+
+# ── Step 5: Install latest plugin via marketplace ──────────────────────────
 info "Installing latest HITL plugin from marketplace..."
 
 if ! command -v claude &>/dev/null; then
