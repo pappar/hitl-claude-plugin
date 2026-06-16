@@ -276,6 +276,16 @@ if [[ -f "$SOURCE_DIR/CHANGELOG.md" ]]; then
   echo "  CHANGELOG.md"
 fi
 
+# ── Shared workflow docs ──────────────────────────────────────────────────────
+# Reference docs from docs/ that are useful to plugin users at runtime.
+echo "Syncing shared workflow docs..."
+for fname in command-map.md workflow-prd.md workflow-brownfield.md workflow-migration.md; do
+  if [[ -f "$SOURCE_DIR/docs/$fname" ]]; then
+    cp "$SOURCE_DIR/docs/$fname" "$PLUGIN_DIR/shared/$fname"
+    echo "  shared/$fname"
+  fi
+done
+
 # ── Normalize internal paths ──────────────────────────────────────────────────
 # Two-pass rewrite (idempotent):
 # Pass 1 — flatten source-relative paths to plugin-relative paths:
