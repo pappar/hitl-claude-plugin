@@ -275,6 +275,12 @@ if [[ -f "$SOURCE_DIR/CHANGELOG.md" ]]; then
   cp "$SOURCE_DIR/CHANGELOG.md" "$PLUGIN_DIR/CHANGELOG.md"
   echo "  CHANGELOG.md"
 fi
+# Canonical workflow catalog — consumed at runtime by /hitl:dev-start-change and /hitl:dev-update
+# to seed and migrate the embedded `workflow` block in .hitl/current-change.yaml.
+if [[ -f "$SOURCE_DIR/ai/shared/workflows.yaml" ]]; then
+  cp "$SOURCE_DIR/ai/shared/workflows.yaml" "$PLUGIN_DIR/shared/workflows.yaml"
+  echo "  shared/workflows.yaml"
+fi
 
 # ── Shared workflow docs ──────────────────────────────────────────────────────
 # Reference docs from docs/ that are useful to plugin users at runtime.
