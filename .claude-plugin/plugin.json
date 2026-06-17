@@ -1,10 +1,10 @@
 {
   "name": "hitl",
-  "description": "HITL AI-Driven Development. Use /hitl:dev-start-from-prd, /hitl:dev-start-brownfield, or /hitl:dev-start-migration to set up a project. Then /hitl:dev-practices for the full 32-step delivery workflow. Run /hitl:help to find the right command for any situation.",
+  "description": "HITL AI-Driven Development. Set up a project with /hitl:dev-start-from-prd, /hitl:dev-start-brownfield, or /hitl:dev-start-migration. Then run /hitl:dev-start-change to start work on an issue \u2014 it picks the workflow, shows the step plan, and drives the breadcrumb. Run /hitl:help to find the right command for any situation.",
   "author": {
     "name": "pappar"
   },
   "repository": "https://github.com/pappar/hitl-claude-plugin",
   "license": "MIT",
-  "version": "1.0.27"
+  "version": "1.0.28"
 }
