@@ -62,7 +62,7 @@ Additionally, AI-assisted development introduces a second observability layer â€
 ## 5. Implementation Notes
 
 - `/hitl:ops-setup-observability` runs before every Tier 2+ deploy and wires go/no-go criteria to the tools defined here. It will fail if the tools in this ADR are not provisioned.
-- The token cost registry template is at `${CLAUDE_PLUGIN_ROOT}/shared/templates/token-cost-registry-template.yaml`. Update it at Step 31 of the 32-step workflow for every change.
+- The token cost registry template is at `${CLAUDE_PLUGIN_ROOT}/shared/templates/token-cost-registry-template.yaml`. Update it at Step 31 of the 31-step workflow for every change.
 - Session logs are written automatically by the `write-session-summary.sh` hook at the end of each Claude Code session. They are gitignored and local only.
 
 ## 6. Open Questions
