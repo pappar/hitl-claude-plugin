@@ -265,6 +265,20 @@ for src_dir in \
   fi
 done
 
+# ── Shared CI tooling ─────────────────────────────────────────────────────────
+# Python tooling that product repos copy in during onboarding and reference by
+# repo path from the copied ci/workflows/*.yml templates. Shipped as assets under
+# shared/ci/ so /hitl:dev-start-brownfield and /hitl:dev-start-from-prd can copy them.
+echo "Syncing shared CI tooling..."
+if [[ -d "$SOURCE_DIR/ci/manifest-drift" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/ci/manifest-drift"
+  find "$SOURCE_DIR/ci/manifest-drift" -maxdepth 1 \( -name "*.py" -o -name "*.md" \) | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/ci/manifest-drift/$fname"
+    echo "  shared/ci/manifest-drift/$fname"
+  done
+fi
+
 # ── Shared prose ──────────────────────────────────────────────────────────────
 echo "Syncing shared prose..."
 if [[ -f "$SOURCE_DIR/ai/shared/challenge-stance.md" ]]; then

@@ -26,6 +26,16 @@ Run convention checks against the current codebase and report violations in-chat
 
 ---
 
+## Required tools
+
+This skill shells out to external CLIs. If a check's tool is not installed, report the install command for it rather than failing silently — the secrets check has a built-in `grep` fallback.
+
+- **Semgrep check:** `semgrep` (`pip install semgrep` or `brew install semgrep`)
+- **Secrets scan (one of):** `gitleaks`, `trufflehog`, `detect-secrets`, or `semgrep`; falls back to `grep` if none is installed
+- **Manifest drift + Mermaid checks:** `python` / `python3` (runs the bundled `ci/` and `scripts/` checkers)
+
+---
+
 ## Step 1 — Run the checks
 
 Run all four checks (or a subset if `--only` is specified):
@@ -81,8 +91,14 @@ Flag any match as a **blocking violation** — a secret committed to the repo ca
 
 ### Manifest drift
 
+The checker derives its scan roots from the manifest's listed files, so no `--source-dirs` is needed. If the script is absent (it is copied into the repo during onboarding), report that it is not installed rather than treating the check as passed:
+
 ```bash
-python ci/manifest-drift/check_manifest_drift.py --source-dirs app/ src/
+if [[ -f ci/manifest-drift/check_manifest_drift.py ]]; then
+  python ci/manifest-drift/check_manifest_drift.py
+else
+  echo "SKIPPED: ci/manifest-drift/check_manifest_drift.py not installed — run /hitl:dev-start-brownfield Step 3, or copy it from the plugin's shared/ci/manifest-drift/. Manifest drift was NOT checked."
+fi
 ```
 
 ### Mermaid br tags

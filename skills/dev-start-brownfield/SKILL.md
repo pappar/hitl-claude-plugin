@@ -141,17 +141,17 @@ workflow:
   id: brownfield
   total: 11
   steps:
-    - { n: 1,  key: map_code,        label: "MapCode",    status: current }
-    - { n: 2,  key: claude_md,       label: "CLAUDE.md",  status: open }
-    - { n: 3,  key: manifest,        label: "Manifest",   status: open }
-    - { n: 4,  key: arch_review,     label: "ArchRvw",    status: open }
-    - { n: 5,  key: verify_pipeline, label: "Pipeline",   status: open }
-    - { n: 6,  key: observability,   label: "Observ",     status: open }
-    - { n: 7,  key: priority_docs,   label: "Docs",       status: open }
-    - { n: 8,  key: seed_registries, label: "Registries", status: open }
-    - { n: 9,  key: graphify,        label: "Graphify",   status: open }
-    - { n: 10, key: create_issue,    label: "Issue",      status: open }
-    - { n: 11, key: confirm_ready,   label: "Ready",      status: open }
+    - { n: 1,  key: map_code,        label: "MapCode",    phase: "Brownfield Setup", status: current }
+    - { n: 2,  key: claude_md,       label: "CLAUDE.md",  phase: "Brownfield Setup", status: open }
+    - { n: 3,  key: manifest,        label: "Manifest",   phase: "Brownfield Setup", status: open }
+    - { n: 4,  key: arch_review,     label: "ArchRvw",    phase: "Brownfield Setup", status: open }
+    - { n: 5,  key: verify_pipeline, label: "Pipeline",   phase: "Brownfield Setup", status: open }
+    - { n: 6,  key: observability,   label: "Observ",     phase: "Brownfield Setup", status: open }
+    - { n: 7,  key: priority_docs,   label: "Docs",       phase: "Brownfield Setup", status: open }
+    - { n: 8,  key: seed_registries, label: "Registries", phase: "Brownfield Setup", status: open }
+    - { n: 9,  key: graphify,        label: "Graphify",   phase: "Brownfield Setup", status: open }
+    - { n: 10, key: create_issue,    label: "Issue",      phase: "Brownfield Setup", status: open }
+    - { n: 11, key: confirm_ready,   label: "Ready",      phase: "Brownfield Setup", status: open }
 current_step:
   number: 1
   name: "Map codebase"
@@ -203,6 +203,18 @@ If `docs/system-manifest.yaml` is missing or template-only:
 - Incorporate feedback and update the manifest.
 
 If a real manifest already exists, read it, summarize the domains, and ask: "Is this manifest still accurate? Anything outdated?"
+
+**Install the manifest drift checker.** The manifest is only load-bearing if something keeps it honest. Resolve the plugin root once (reused in later steps), then copy the checker into the repo so `/hitl:dev-check-conventions` and the `ci/workflows/*.yml` templates (which reference it by repo path) can run it:
+
+```bash
+PLUGIN_ROOT=$(python3 -c "import json,os,sys;d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')));[print(i['installPath']) or sys.exit(0) for i in d.get('plugins',{}).get('hitl@hitl',[]) if os.path.isfile(os.path.join(i.get('installPath',''),'.claude-plugin/plugin.json'))]" 2>/dev/null)
+if [[ -n "$PLUGIN_ROOT" && -f "$PLUGIN_ROOT/shared/ci/manifest-drift/check_manifest_drift.py" ]]; then
+  mkdir -p ci/manifest-drift
+  [[ ! -f ci/manifest-drift/check_manifest_drift.py ]] && cp "$PLUGIN_ROOT/shared/ci/manifest-drift/"*.py ci/manifest-drift/
+fi
+```
+
+The checker derives its scan roots from the manifest's listed files, so it needs no per-project configuration. If `$PLUGIN_ROOT` is empty, skip; `/hitl:dev-check-conventions` reports the checker as absent rather than passing.
 
 ---
 
@@ -399,6 +411,8 @@ The 31-step workflow queries these two registries at multiple points. They must 
 - Ask: "What broke in production in the last 6 months? Describe each incident in one sentence."
 - For each answer, add one entry with `description`, `domain` (best guess), and `date`.
 - If they have nothing: create an empty stub and say: "You can add entries later — after each production incident, run `/hitl:ops-incident`."
+
+**Product baseline** (`docs/01-product/prd.md`): the PM and QA skills read the PRD for personas and requirements, so a brownfield project with no PRD leaves them nowhere to land. Initialize the PRD *shell*, not a retroactive spec of existing behaviour (that lives in the reverse-engineered technical docs), only personas and format so the next requirement has a home. If `docs/01-product/prd.md` is missing and `$PLUGIN_ROOT` (Step 3) is set, run `mkdir -p docs/01-product && cp "$PLUGIN_ROOT/${CLAUDE_PLUGIN_ROOT}/shared/templates/prd-template.md" docs/01-product/prd.md`. Then ask "Who are the primary users of this system, and what does each need?" and fill §3 (Target Users and Personas); leave §5 (Functional Requirements) empty, noted "No requirements yet — added via `/hitl:pm-add-feature`." Say: "Product baseline initialized; PM and QA skills are now active."
 
 ---
 
