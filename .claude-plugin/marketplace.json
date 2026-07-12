@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "hitl",
-      "description": "HITL AI-Driven Development. 49 skills, 6 agents, enforcement hooks, and templates for the full 31-step delivery workflow. Start work with /hitl:dev-start-change.",
+      "description": "HITL AI-Driven Development. 50 skills, 6 agents, enforcement hooks, and templates for the full 31-step delivery workflow, plus the platform readiness workflow (onboarded to delivery-ready) with a hard production-deploy gate. Start work with /hitl:dev-start-change.",
       "author": {
         "name": "pappar"
       },
@@ -16,7 +16,7 @@
       "source": {
         "source": "github",
         "repo": "pappar/hitl-claude-plugin",
-        "commit": "f4df3fcc42fc637aafbc896eda3fb61a85208185"
+        "commit": "481ac0fa491f0a69f887630808dd1db328be5929"
       },
       "homepage": "https://github.com/pappar/hitl-claude-plugin"
     }
