@@ -28,7 +28,7 @@ HITL changes. Design: `docs/design/platform-bootstrap/` in the HITL source repo.
 if the register does not exist run `derive`; otherwise run `status`.
 
 **The register:** `docs/04-operations/platform-readiness.yaml`. If missing, copy it from
-the plugin template first: `cp "$PLUGIN_ROOT/${CLAUDE_PLUGIN_ROOT}/shared/templates/platform-readiness-template.yaml"
+the plugin template first: `cp "${CLAUDE_PLUGIN_ROOT}/shared/templates/platform-readiness-template.yaml"
 docs/04-operations/platform-readiness.yaml` (same `$PLUGIN_ROOT` resolution as the other
 templates; from source, `${CLAUDE_PLUGIN_ROOT}/shared/templates/`).
 

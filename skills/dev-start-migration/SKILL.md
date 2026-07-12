@@ -454,7 +454,7 @@ After the review, the architect runs `/hitl:architect-design-system docs/00-migr
 **Before the first development slice begins — generate the platform roadmap:**
 
 Initialize the platform readiness register:
-`mkdir -p docs/04-operations && cp "$PLUGIN_ROOT/${CLAUDE_PLUGIN_ROOT}/shared/templates/platform-readiness-template.yaml" docs/04-operations/platform-readiness.yaml`,
+`mkdir -p docs/04-operations && cp "${CLAUDE_PLUGIN_ROOT}/shared/templates/platform-readiness-template.yaml" docs/04-operations/platform-readiness.yaml`,
 set `project_kind: migration` (this activates the migration-only **Parity** and **Cutover**
 layers: golden-dataset harness, shadow-run, cutover plan with rollback-to-legacy, dual-run
 window, legacy sunset — a migration is not done when the code is ported; it is done when

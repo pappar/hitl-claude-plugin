@@ -283,7 +283,7 @@ If no CI/CD config exists, or the build fails and cannot be quickly fixed, say:
 
 If they want a scaffold, generate a minimal CI/CD config (build → test → deploy-to-staging) using the tech stack from Step 2 and the deployment target from the deployment view. Do not include a production deploy job without an explicit approval gate.
 
-**Persist the verdicts (required):** copy `"$PLUGIN_ROOT/${CLAUDE_PLUGIN_ROOT}/shared/templates/platform-readiness-template.yaml"`
+**Persist the verdicts (required):** copy `"${CLAUDE_PLUGIN_ROOT}/shared/templates/platform-readiness-template.yaml"`
 to `docs/04-operations/platform-readiness.yaml` if missing, set `project_kind: brownfield`,
 and record this step's verdicts there: `E1` (build reproducible), `E3` (staging deploy from
 CI), `D1` (suites run in CI and can fail) — evidence rules are in the template header. The
@@ -346,7 +346,7 @@ try:
 except:pass
 " 2>/dev/null)
 [[ ! -f docs/04-operations/token-cost-registry.yaml ]] && \
-  cp "$PLUGIN_ROOT/${CLAUDE_PLUGIN_ROOT}/shared/templates/token-cost-registry-template.yaml" \
+  cp "${CLAUDE_PLUGIN_ROOT}/shared/templates/token-cost-registry-template.yaml" \
      docs/04-operations/token-cost-registry.yaml
 ```
 
