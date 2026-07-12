@@ -327,13 +327,22 @@ find "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" \
     -e 's|skills/dev-practices/|${CLAUDE_PLUGIN_ROOT}/skills/dev-practices/|g' \
     -e 's|skills/dev-apply-change/|${CLAUDE_PLUGIN_ROOT}/skills/dev-apply-change/|g' \
     "$f"
+  # Pass 3: collapse double prefixes. Source text that already carries a
+  # "$PLUGIN_ROOT/shared/..." runtime path gets ${CLAUDE_PLUGIN_ROOT}/ inserted by
+  # pass 2, producing "$PLUGIN_ROOT/${CLAUDE_PLUGIN_ROOT}/shared/..." — a path that
+  # resolves nowhere in the installed layout (found by the 2026-07-12 v1.1.0 round-5
+  # validation). ${CLAUDE_PLUGIN_ROOT} alone is the canonical installed-plugin form.
+  sed -i '' \
+    -e 's|\$PLUGIN_ROOT/\${CLAUDE_PLUGIN_ROOT}/|${CLAUDE_PLUGIN_ROOT}/|g' \
+    -e 's|\${CLAUDE_PLUGIN_ROOT}/\${CLAUDE_PLUGIN_ROOT}/|${CLAUDE_PLUGIN_ROOT}/|g' \
+    "$f"
 done
 
 # ── Post-build checks ────────────────────────────────────────────────────────
 
 # Guard: mangled relative+CLAUDE_PLUGIN_ROOT links (e.g. ../../../${CLAUDE_PLUGIN_ROOT}/...)
 echo "Checking for mangled relative plugin paths..."
-mangled=$(grep -rl '\.\./.*\${CLAUDE_PLUGIN_ROOT}' \
+mangled=$(grep -rl -e '\.\./.*\${CLAUDE_PLUGIN_ROOT}' -e 'PLUGIN_ROOT/\${CLAUDE_PLUGIN_ROOT}' \
   "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" 2>/dev/null || true)
 if [[ -n "$mangled" ]]; then
   echo "ERROR: found relative paths combined with \${CLAUDE_PLUGIN_ROOT}:" >&2
