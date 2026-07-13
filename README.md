@@ -22,6 +22,24 @@ claude plugin install hitl@hitl
 
 Restart Claude Code after installing. If `plugin install` fails with a host-key error, see [Troubleshooting](#troubleshooting).
 
+## Release lines
+
+The marketplace serves two lines. Install **one**, not both — they declare the same internal plugin name (`hitl`) and the same `/hitl:*` commands.
+
+| Entry | Version | Served from | Who it's for |
+|---|---|---|---|
+| `hitl@hitl` | **2.1.0** (current) | `release/2.x` | New projects and teams ready for the 2.x workflow model (step plans derived per change from impact analysis) |
+| `hitl-1x@hitl` | 1.1.0 (legacy) | `release/1.x` | Teams staying on the numbered 31-step workflow; feature-frozen except critical fixes |
+
+```bash
+# legacy line
+claude plugin install hitl-1x@hitl
+```
+
+To stay on 1.x when moving off `hitl@hitl`, uninstall it first (`claude plugin uninstall hitl@hitl`), then install `hitl-1x@hitl`. Upgrading 1.x → 2.x is additive: in-flight changes keep their progress and the readiness register carries over unchanged.
+
+Check what you are running with `claude plugin list`. Note for anyone who installed between 2026-07-11 and 2026-07-13: a marketplace pinning defect meant fresh installs in that window received a 2.0.x pre-release build instead of v1.1.0 — run `claude plugin list` and reinstall the line you intended.
+
 ## Update
 
 Once installed, update from inside Claude Code:
