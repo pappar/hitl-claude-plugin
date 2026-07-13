@@ -28,8 +28,8 @@ The marketplace serves two lines. Install **one**, not both — they declare the
 
 | Entry | Version | Served from | Who it's for |
 |---|---|---|---|
-| `hitl@hitl` | **2.1.0** (current) | `release/2.x` | New projects and teams ready for the 2.x workflow model (step plans derived per change from impact analysis) |
-| `hitl-1x@hitl` | 1.1.0 (legacy) | `release/1.x` | Teams staying on the numbered 31-step workflow; feature-frozen except critical fixes |
+| `hitl@hitl` | **2.1.1** (current) | `release/2.x` | New projects and teams ready for the 2.x workflow model (step plans derived per change from impact analysis) |
+| `hitl-1x@hitl` | 1.1.1 (legacy) | `release/1.x` | Teams staying on the numbered 31-step workflow; feature-frozen except critical fixes |
 
 ```bash
 # legacy line
