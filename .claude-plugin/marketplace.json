@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "hitl",
-      "description": "HITL AI-Driven Development. 50 skills, 6 agents, enforcement hooks, and templates for the full 31-step delivery workflow, plus the platform readiness workflow (onboarded to delivery-ready) with a hard production-deploy gate. Start work with /hitl:dev-start-change.",
+      "description": "HITL AI-Driven Development (2.x line, current). 50 skills, 6 agents, enforcement hooks, and templates for the full governed delivery workflow \u2014 the step plan is derived per change from impact analysis \u2014 plus the platform readiness workflow (onboarded to delivery-ready) with a hard production-deploy gate. Start work with /hitl:dev-start-change.",
       "author": {
         "name": "pappar"
       },
@@ -16,7 +16,21 @@
       "source": {
         "source": "github",
         "repo": "pappar/hitl-claude-plugin",
-        "commit": "481ac0fa491f0a69f887630808dd1db328be5929"
+        "ref": "release/2.x"
+      },
+      "homepage": "https://github.com/pappar/hitl-claude-plugin"
+    },
+    {
+      "name": "hitl-1x",
+      "description": "HITL AI-Driven Development \u2014 legacy 1.x line (v1.1.0). The numbered 31-step delivery workflow plus the platform readiness workflow and hard production-deploy gate. For teams not yet ready to move to 2.x; feature-frozen except critical fixes. Install this OR hitl, not both. Start work with /hitl:dev-start-change.",
+      "author": {
+        "name": "pappar"
+      },
+      "category": "productivity",
+      "source": {
+        "source": "github",
+        "repo": "pappar/hitl-claude-plugin",
+        "ref": "release/1.x"
       },
       "homepage": "https://github.com/pappar/hitl-claude-plugin"
     }
