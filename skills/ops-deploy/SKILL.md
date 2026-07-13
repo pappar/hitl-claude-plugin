@@ -1,5 +1,5 @@
 ---
-description: Deploy a verified build artifact to a target environment following the approved rollout plan. Reads rollout strategy from .hitl/current-change.yaml and executes deployment with canary configuration where applicable.
+description: Deploy a verified build artifact to a target environment following the approved rollout plan. Run at the Ship phase after ops-build and IaC verification, and for canary promotions. Reads rollout strategy from .hitl/current-change.yaml and executes deployment with canary configuration where applicable.
 argument-hint: "[environment: staging|canary|production] [branch or artifact reference]"
 disable-model-invocation: true
 ---
@@ -25,6 +25,17 @@ Deploy a verified artifact to the specified environment, following the approved 
 **Input:** $ARGUMENTS (environment name and artifact reference)
 
 **Refusal rule:** If `.hitl/current-change.yaml` is missing or `build.status` is not `ready`, stop: "No verified build found. Run `/hitl:ops-build` first."
+
+**Platform readiness pre-flight (hard gate):** Before any production deploy, run:
+```bash
+"$PLUGIN_ROOT/hooks/check-platform-ready.sh" <environment>
+```
+(from source: `ai/claude/hooks/check-platform-ready.sh`). Exit 2 means the platform is not
+delivery-ready for this tier — print the script's output verbatim and **stop; do not
+proceed, do not offer to bypass**. The only paths forward are completing the roadmap items
+or recording waivers (owner + revisit + tier_limit) in
+`docs/04-operations/platform-readiness.yaml`, both via `/hitl:ops-plan-platform`. Staging
+and canary targets are never gated.
 
 **Graphify pre-flight:** Before the first step, run:
 ```bash

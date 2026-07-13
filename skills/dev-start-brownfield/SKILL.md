@@ -124,7 +124,7 @@ Check whether `.hitl/hooks/` already exists.
    ```
    Then fill in today's date in `adr-0001-hitl-adoption.md` and `adr-0002-documentation-first.md` (replace `[fill in: project start date]` with today's ISO date).
 
-6. Say: "Hooks wired. `.hitl/hooks/`, `.claude/settings.json`, `.gitignore`, and 4 default ADRs created in `docs/02-design/technical/adrs/`. **Restart Claude Code now** so the hooks load, then re-run this command to continue setup."
+6. Say: "Hooks wired. `.hitl/hooks/`, `.claude/settings.json`, `.gitignore`, and 8 baseline ADRs created in `docs/02-design/technical/adrs/`. **Restart Claude Code now** so the hooks load, then re-run this command to continue setup."
 
 ---
 
@@ -286,14 +286,19 @@ The 31-step workflow (`/hitl:dev-practices`) gates every PR on a passing staging
 
 If no CI/CD config exists, or the build fails and cannot be quickly fixed, say:
 
-> "No working build pipeline found. This is a 🔴 concern — the 31-step workflow requires a passing build and a staging deploy path before a PR can be closed.
->
-> Options:
+> "No working build pipeline found. This is a 🔴 concern — the 31-step workflow requires a passing build and a staging deploy path before a PR can be closed. Options:
 > - Scaffold a CI/CD config now: describe your hosting target (GitHub Actions → AWS/GCP/Azure/Railway/Fly.io) and I'll generate a starter pipeline
 > - Set it up manually and re-run this step when ready
 > - Proceed and accept that the build and deploy steps of the 31-step workflow will need manual execution until the pipeline exists"
 
 If they want a scaffold, generate a minimal CI/CD config (build → test → deploy-to-staging) using the tech stack from Step 2 and the deployment target from the deployment view. Do not include a production deploy job without an explicit approval gate.
+
+**Persist the verdicts (required):** copy `"${CLAUDE_PLUGIN_ROOT}/shared/templates/platform-readiness-template.yaml"`
+to `docs/04-operations/platform-readiness.yaml` if missing, set `project_kind: brownfield`,
+and record this step's verdicts there: `E1` (build reproducible), `E3` (staging deploy from
+CI), `D1` (suites run in CI and can fail) — evidence rules are in the template header. The
+register feeds `/hitl:ops-plan-platform` (Step 11) and the production-deploy gate; a verdict
+not written here does not exist.
 
 ---
 
@@ -351,7 +356,7 @@ try:
 except:pass
 " 2>/dev/null)
 [[ ! -f docs/04-operations/token-cost-registry.yaml ]] && \
-  cp "$PLUGIN_ROOT/${CLAUDE_PLUGIN_ROOT}/shared/templates/token-cost-registry-template.yaml" \
+  cp "${CLAUDE_PLUGIN_ROOT}/shared/templates/token-cost-registry-template.yaml" \
      docs/04-operations/token-cost-registry.yaml
 ```
 
@@ -370,6 +375,10 @@ except:pass
 | No error tracking | 🟢 | Recommended — Sentry free tier covers most projects |
 | No distributed tracing | 🟢 | Optional for monoliths; required for microservices with cross-service calls |
 | Token cost registry missing | 🟡 | Created above — update at Step 31 of every change |
+
+**5. Persist the survey (required):** record `F1` in the readiness register (from Step 5):
+`verified` with instrument names as evidence, or `gap` at the worst open row's severity with
+the open rows listed. An unrecorded gap is invisible to the roadmap and the deploy gate.
 
 ---
 
@@ -412,7 +421,7 @@ The 31-step workflow queries these two registries at multiple points. They must 
 - For each answer, add one entry with `description`, `domain` (best guess), and `date`.
 - If they have nothing: create an empty stub and say: "You can add entries later — after each production incident, run `/hitl:ops-incident`."
 
-**Product baseline** (`docs/01-product/prd.md`): the PM and QA skills read the PRD for personas and requirements, so a brownfield project with no PRD leaves them nowhere to land. Initialize the PRD *shell*, not a retroactive spec of existing behaviour (that lives in the reverse-engineered technical docs), only personas and format so the next requirement has a home. If `docs/01-product/prd.md` is missing and `$PLUGIN_ROOT` (Step 3) is set, run `mkdir -p docs/01-product && cp "$PLUGIN_ROOT/${CLAUDE_PLUGIN_ROOT}/shared/templates/prd-template.md" docs/01-product/prd.md`. Then ask "Who are the primary users of this system, and what does each need?" and fill §3 (Target Users and Personas); leave §5 (Functional Requirements) empty, noted "No requirements yet — added via `/hitl:pm-add-feature`." Say: "Product baseline initialized; PM and QA skills are now active."
+**Product baseline** (`docs/01-product/prd.md`): the PM and QA skills read the PRD for personas and requirements, so a brownfield project with no PRD leaves them nowhere to land. Initialize the PRD *shell*, not a retroactive spec of existing behaviour (that lives in the reverse-engineered technical docs), only personas and format so the next requirement has a home. If `docs/01-product/prd.md` is missing and `$PLUGIN_ROOT` (Step 3) is set, run `mkdir -p docs/01-product && cp "${CLAUDE_PLUGIN_ROOT}/shared/templates/prd-template.md" docs/01-product/prd.md`. Then ask "Who are the primary users of this system, and what does each need?" and fill §3 (Target Users and Personas); leave §5 (Functional Requirements) empty, noted "No requirements yet — added via `/hitl:pm-add-feature`." Say: "Product baseline initialized; PM and QA skills are now active."
 
 ---
 
@@ -476,7 +485,7 @@ Output this exactly:
 ---
 **Brownfield baseline established.**
 
-You are starting incrementally: manifest and priority component docs exist, registries are seeded. Undocumented components will need their LLDs created when you first change them — run `/hitl:dev-generate-docs` for that component, then resume.
+You are starting incrementally: manifest and priority component docs exist, registries are seeded.
 
 **What this means for your first changes:**
 - Treat AI output from steps 5, 10, and 14 as drafts — the docs are new and may not yet reflect actual behavior. Increase human review scrutiny until the docs have been corrected through real use.
@@ -487,5 +496,10 @@ For every change going forward:
 2. Run `/hitl:dev-practices` — the 31-step workflow starts here
 3. Update HLD/LLD if the design changes
 4. Code → tests → PR
+
+**Next: the platform roadmap.** Steps 5-6 wrote the readiness register; changes can be
+*made* now but *delivered to customers* only once it is green. Run
+`/hitl:ops-plan-platform roadmap` to turn the recorded gaps into phased GitHub issues (each
+an ordinary HITL change). Tier 2+ **production** deploys stay blocked until delivery-ready.
 
 ---
