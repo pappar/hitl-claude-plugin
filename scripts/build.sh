@@ -61,6 +61,7 @@ remap_skill_path() {
     migrate)       echo "dev-review-external-docs/${rest#*/}" ;;  # drop migrate/review-external-docs prefix
     ta-approve)    echo "ta-approve/$rest" ;;  # TA role — keep prefix as-is
     help)          echo "help/$rest" ;;         # meta skill — no role prefix
+    skills)        echo "$rest" ;;              # ai/claude/skills/<name>/ = a top-level role-less skill → skills/<name>/ (e.g. agentic-intake)
     architect|pm|qa|ops)
       local skill="${rest%%/*}"   # role skill name
       local file="${rest#*/}"     # file within skill dir
@@ -296,6 +297,32 @@ if [[ -d "$SOURCE_DIR/tools/manifest-agentic" ]]; then
     cp "$src" "$PLUGIN_DIR/shared/tools/manifest-agentic/$fname"
     echo "  shared/tools/manifest-agentic/$fname"
   done
+fi
+# Agentic Design Advisor (#35): the recommend/record/hand-off tools + curated catalog that the
+# hitl:agentic-intake skill runs. Ships the same way as manifest-agentic so onboarding can copy it.
+# The tools/../.. -> ci/manifest-agentic relative import is preserved under shared/ (shared/tools/
+# agentic-advisor/../../ci/manifest-agentic = shared/ci/manifest-agentic), so #10's FIELD_SPEC derivation
+# keeps working; the at-parity static fallback covers a missing #10.
+if [[ -d "$SOURCE_DIR/tools/agentic-advisor" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/tools/agentic-advisor"
+  find "$SOURCE_DIR/tools/agentic-advisor" -maxdepth 1 -name "*.py" | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/tools/agentic-advisor/$fname"
+    echo "  shared/tools/agentic-advisor/$fname"
+  done
+fi
+if [[ -d "$SOURCE_DIR/ci/agentic-advisor" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/ci/agentic-advisor"
+  find "$SOURCE_DIR/ci/agentic-advisor" -maxdepth 1 -name "*.py" | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/ci/agentic-advisor/$fname"
+    echo "  shared/ci/agentic-advisor/$fname"
+  done
+fi
+if [[ -f "$SOURCE_DIR/ai/shared/agentic/catalog.yaml" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/agentic"
+  cp "$SOURCE_DIR/ai/shared/agentic/catalog.yaml" "$PLUGIN_DIR/shared/agentic/catalog.yaml"
+  echo "  shared/agentic/catalog.yaml"
 fi
 
 # ── Shared prose ──────────────────────────────────────────────────────────────
