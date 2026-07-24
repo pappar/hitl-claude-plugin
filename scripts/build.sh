@@ -278,6 +278,25 @@ if [[ -d "$SOURCE_DIR/ci/manifest-drift" ]]; then
     echo "  shared/ci/manifest-drift/$fname"
   done
 fi
+# Compound-agentic surface (#10): the fail-closed validators + generator that product
+# repos copy in to govern a graph of deterministic services + simple/deep agents. Ships
+# the same way as manifest-drift so onboarding can copy it.
+if [[ -d "$SOURCE_DIR/ci/manifest-agentic" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/ci/manifest-agentic"
+  find "$SOURCE_DIR/ci/manifest-agentic" -maxdepth 1 \( -name "*.py" -o -name "*.md" -o -name "*.yaml" \) | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/ci/manifest-agentic/$fname"
+    echo "  shared/ci/manifest-agentic/$fname"
+  done
+fi
+if [[ -d "$SOURCE_DIR/tools/manifest-agentic" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/tools/manifest-agentic"
+  find "$SOURCE_DIR/tools/manifest-agentic" -maxdepth 1 -name "*.py" | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/tools/manifest-agentic/$fname"
+    echo "  shared/tools/manifest-agentic/$fname"
+  done
+fi
 
 # ── Shared prose ──────────────────────────────────────────────────────────────
 echo "Syncing shared prose..."
