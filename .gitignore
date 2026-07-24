@@ -1,1 +1,5 @@
 .DS_Store
+
+# Python bytecode — never ship generated caches (release.sh does `git add -A`)
+__pycache__/
+*.py[cod]
