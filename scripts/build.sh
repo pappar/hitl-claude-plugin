@@ -324,6 +324,33 @@ if [[ -f "$SOURCE_DIR/ai/shared/agentic/catalog.yaml" ]]; then
   cp "$SOURCE_DIR/ai/shared/agentic/catalog.yaml" "$PLUGIN_DIR/shared/agentic/catalog.yaml"
   echo "  shared/agentic/catalog.yaml"
 fi
+# First Pass (#FR-29): the fail-closed skip-ledger validator + library and its prose. Ships the same way
+# as manifest-agentic so onboarding can copy it into a product repo (ci/first-pass + the CI template).
+if [[ -d "$SOURCE_DIR/ci/first-pass" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/ci/first-pass"
+  find "$SOURCE_DIR/ci/first-pass" -maxdepth 1 -name "*.py" | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/ci/first-pass/$fname"
+    echo "  shared/ci/first-pass/$fname"
+  done
+fi
+if [[ -d "$SOURCE_DIR/ai/shared/first-pass" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/first-pass"
+  find "$SOURCE_DIR/ai/shared/first-pass" -maxdepth 1 -name "*.md" | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/first-pass/$fname"
+    echo "  shared/first-pass/$fname"
+  done
+fi
+if [[ -f "$SOURCE_DIR/ai/shared/skip-record.md" ]]; then
+  cp "$SOURCE_DIR/ai/shared/skip-record.md" "$PLUGIN_DIR/shared/skip-record.md"
+  echo "  shared/skip-record.md"
+fi
+if [[ -f "$SOURCE_DIR/ci/workflows/first-pass-check.yml" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/ci-workflows"
+  cp "$SOURCE_DIR/ci/workflows/first-pass-check.yml" "$PLUGIN_DIR/shared/ci-workflows/first-pass-check.yml"
+  echo "  shared/ci-workflows/first-pass-check.yml"
+fi
 
 # ── Shared prose ──────────────────────────────────────────────────────────────
 echo "Syncing shared prose..."
