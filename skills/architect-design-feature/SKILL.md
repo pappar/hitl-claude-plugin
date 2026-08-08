@@ -142,7 +142,7 @@ For token cost estimation, use the phase-level formula from `${CLAUDE_PLUGIN_ROO
 
 ### 1g. Initialize `.hitl/current-change.yaml`
 
-Create or update using the schema at `docs/changes/change-context.schema.yaml`. See `docs/changes/GH-000-example.yaml` for a filled-in example.
+Create or update using the schema at `${CLAUDE_PLUGIN_ROOT}/shared/templates/change-context.schema.yaml`. See `${CLAUDE_PLUGIN_ROOT}/shared/templates/GH-000-example.yaml` for a filled-in example.
 
 Set from this impact analysis:
 - `change_id`: `GH-<issue-number>`
