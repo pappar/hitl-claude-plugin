@@ -324,6 +324,27 @@ if [[ -f "$SOURCE_DIR/ai/shared/agentic/catalog.yaml" ]]; then
   cp "$SOURCE_DIR/ai/shared/agentic/catalog.yaml" "$PLUGIN_DIR/shared/agentic/catalog.yaml"
   echo "  shared/agentic/catalog.yaml"
 fi
+# Semgrep convention rules (issue #47). These were NEVER packaged: init-project.sh copies .semgrep/
+# from a hitl-dev-platform checkout, so a plugin-onboarded repo had no rules at all and
+# `/hitl:dev-check-conventions` failed with "unable to find a config; path `.semgrep` does not exist".
+# Shipped under shared/semgrep/ (dot-prefixed dirs are awkward as plugin assets) and installed to
+# .semgrep/ by the onboarding skills, preserving the category subdirectories.
+if [[ -d "$SOURCE_DIR/.semgrep" ]]; then
+  find "$SOURCE_DIR/.semgrep" -type f \( -name "*.yaml" -o -name "*.yml" -o -name ".semgrepignore" \) | while read -r src; do
+    rel="${src#"$SOURCE_DIR"/.semgrep/}"
+    mkdir -p "$PLUGIN_DIR/shared/semgrep/$(dirname "$rel")"
+    cp "$src" "$PLUGIN_DIR/shared/semgrep/$rel"
+    echo "  shared/semgrep/$rel"
+  done
+fi
+# The installer the onboarding skills invoke — shipped beside the rules it copies.
+if [[ -f "$SOURCE_DIR/ai/shared/semgrep/install.sh" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/semgrep"
+  cp "$SOURCE_DIR/ai/shared/semgrep/install.sh" "$PLUGIN_DIR/shared/semgrep/install.sh"
+  chmod 755 "$PLUGIN_DIR/shared/semgrep/install.sh"
+  echo "  shared/semgrep/install.sh"
+fi
+
 # First Pass (#FR-29): the fail-closed skip-ledger validator + library and its prose. Ships the same way
 # as manifest-agentic so onboarding can copy it into a product repo (ci/first-pass + the CI template).
 if [[ -d "$SOURCE_DIR/ci/first-pass" ]]; then
