@@ -311,6 +311,16 @@ if [[ -d "$SOURCE_DIR/tools/agentic-advisor" ]]; then
     echo "  shared/tools/agentic-advisor/$fname"
   done
 fi
+# CLAUDE.md HITL-block upsert: dev-update Step 4.8 runs this from the installed plugin, and
+# init-project.sh runs the same file from source. One implementation, two callers.
+if [[ -d "$SOURCE_DIR/tools/hitl-onboarding" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/tools/hitl-onboarding"
+  find "$SOURCE_DIR/tools/hitl-onboarding" -maxdepth 1 -name "*.py" ! -name "test_*" | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/tools/hitl-onboarding/$fname"
+    echo "  shared/tools/hitl-onboarding/$fname"
+  done
+fi
 if [[ -d "$SOURCE_DIR/ci/agentic-advisor" ]]; then
   mkdir -p "$PLUGIN_DIR/shared/ci/agentic-advisor"
   find "$SOURCE_DIR/ci/agentic-advisor" -maxdepth 1 -name "*.py" | while read -r src; do
@@ -393,7 +403,7 @@ fi
 # ── Shared workflow docs ──────────────────────────────────────────────────────
 # Reference docs from docs/ that are useful to plugin users at runtime.
 echo "Syncing shared workflow docs..."
-for fname in command-map.md usage-guide.md workflow-prd.md workflow-brownfield.md workflow-migration.md; do
+for fname in getting-started.md command-map.md usage-guide.md workflow-prd.md workflow-brownfield.md workflow-migration.md; do
   if [[ -f "$SOURCE_DIR/docs/$fname" ]]; then
     cp "$SOURCE_DIR/docs/$fname" "$PLUGIN_DIR/shared/$fname"
     echo "  shared/$fname"
