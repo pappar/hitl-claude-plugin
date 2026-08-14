@@ -273,7 +273,7 @@ done
 echo "Syncing shared CI tooling..."
 if [[ -d "$SOURCE_DIR/ci/manifest-drift" ]]; then
   mkdir -p "$PLUGIN_DIR/shared/ci/manifest-drift"
-  find "$SOURCE_DIR/ci/manifest-drift" -maxdepth 1 \( -name "*.py" -o -name "*.md" \) | while read -r src; do
+  find "$SOURCE_DIR/ci/manifest-drift" -maxdepth 1 ! -name "test_*" \( -name "*.py" -o -name "*.md" \) | while read -r src; do
     fname="$(basename "$src")"
     cp "$src" "$PLUGIN_DIR/shared/ci/manifest-drift/$fname"
     echo "  shared/ci/manifest-drift/$fname"
@@ -284,7 +284,7 @@ fi
 # the same way as manifest-drift so onboarding can copy it.
 if [[ -d "$SOURCE_DIR/ci/manifest-agentic" ]]; then
   mkdir -p "$PLUGIN_DIR/shared/ci/manifest-agentic"
-  find "$SOURCE_DIR/ci/manifest-agentic" -maxdepth 1 \( -name "*.py" -o -name "*.md" -o -name "*.yaml" \) | while read -r src; do
+  find "$SOURCE_DIR/ci/manifest-agentic" -maxdepth 1 ! -name "test_*" \( -name "*.py" -o -name "*.md" -o -name "*.yaml" \) | while read -r src; do
     fname="$(basename "$src")"
     cp "$src" "$PLUGIN_DIR/shared/ci/manifest-agentic/$fname"
     echo "  shared/ci/manifest-agentic/$fname"
@@ -292,7 +292,7 @@ if [[ -d "$SOURCE_DIR/ci/manifest-agentic" ]]; then
 fi
 if [[ -d "$SOURCE_DIR/tools/manifest-agentic" ]]; then
   mkdir -p "$PLUGIN_DIR/shared/tools/manifest-agentic"
-  find "$SOURCE_DIR/tools/manifest-agentic" -maxdepth 1 -name "*.py" | while read -r src; do
+  find "$SOURCE_DIR/tools/manifest-agentic" -maxdepth 1 -name "*.py" ! -name "test_*" | while read -r src; do
     fname="$(basename "$src")"
     cp "$src" "$PLUGIN_DIR/shared/tools/manifest-agentic/$fname"
     echo "  shared/tools/manifest-agentic/$fname"
@@ -305,7 +305,7 @@ fi
 # keeps working; the at-parity static fallback covers a missing #10.
 if [[ -d "$SOURCE_DIR/tools/agentic-advisor" ]]; then
   mkdir -p "$PLUGIN_DIR/shared/tools/agentic-advisor"
-  find "$SOURCE_DIR/tools/agentic-advisor" -maxdepth 1 -name "*.py" | while read -r src; do
+  find "$SOURCE_DIR/tools/agentic-advisor" -maxdepth 1 -name "*.py" ! -name "test_*" | while read -r src; do
     fname="$(basename "$src")"
     cp "$src" "$PLUGIN_DIR/shared/tools/agentic-advisor/$fname"
     echo "  shared/tools/agentic-advisor/$fname"
@@ -323,7 +323,7 @@ if [[ -d "$SOURCE_DIR/tools/hitl-onboarding" ]]; then
 fi
 if [[ -d "$SOURCE_DIR/ci/agentic-advisor" ]]; then
   mkdir -p "$PLUGIN_DIR/shared/ci/agentic-advisor"
-  find "$SOURCE_DIR/ci/agentic-advisor" -maxdepth 1 -name "*.py" | while read -r src; do
+  find "$SOURCE_DIR/ci/agentic-advisor" -maxdepth 1 -name "*.py" ! -name "test_*" | while read -r src; do
     fname="$(basename "$src")"
     cp "$src" "$PLUGIN_DIR/shared/ci/agentic-advisor/$fname"
     echo "  shared/ci/agentic-advisor/$fname"
@@ -359,7 +359,7 @@ fi
 # as manifest-agentic so onboarding can copy it into a product repo (ci/first-pass + the CI template).
 if [[ -d "$SOURCE_DIR/ci/first-pass" ]]; then
   mkdir -p "$PLUGIN_DIR/shared/ci/first-pass"
-  find "$SOURCE_DIR/ci/first-pass" -maxdepth 1 -name "*.py" | while read -r src; do
+  find "$SOURCE_DIR/ci/first-pass" -maxdepth 1 -name "*.py" ! -name "test_*" | while read -r src; do
     fname="$(basename "$src")"
     cp "$src" "$PLUGIN_DIR/shared/ci/first-pass/$fname"
     echo "  shared/ci/first-pass/$fname"
