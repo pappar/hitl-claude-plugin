@@ -233,6 +233,12 @@ else
     cp "$ROOT/shared/tools/manifest-agentic/"*.py tools/manifest-agentic/ 2>/dev/null
     echo "  ✓ ci/manifest-agentic/ (compound-agentic validator) synced — kept your manifest-waivers.yaml"
   fi
+  # Release gate (#80): the adversarial-review validator, so a repo's own CI can run it.
+  if [[ -d "$ROOT/shared/ci/adversarial" ]]; then
+    mkdir -p ci/adversarial
+    cp "$ROOT/shared/ci/adversarial/"*.py ci/adversarial/ 2>/dev/null
+    echo "  ✓ ci/adversarial/ (release review gate) synced"
+  fi
   # Manifest drift (already onboarded in most repos): refresh the checker code only if present.
   if [[ -d "$ROOT/shared/ci/manifest-drift" && -d ci/manifest-drift ]]; then
     cp "$ROOT/shared/ci/manifest-drift/"*.py ci/manifest-drift/ 2>/dev/null
@@ -285,7 +291,7 @@ else
 
   # stage ONLY the paths that exist — a single `git add` over an absent optional path errors on the whole
   # pathspec and (with `|| true`) would silently stage NOTHING (codex-7).
-  for p in ci/first-pass ci/manifest-agentic tools/manifest-agentic ci/manifest-drift .github/workflows/first-pass-check.yml; do
+  for p in ci/first-pass ci/manifest-agentic tools/manifest-agentic ci/manifest-drift ci/adversarial .github/workflows/first-pass-check.yml; do
     [[ -e "$p" ]] && git add "$p"
   done
 fi
@@ -400,11 +406,17 @@ refreshes, or stays silent if current; a truncated `HITL:BEGIN` leaves the file 
 
 ```bash
 ROOT="${CLAUDE_PLUGIN_ROOT:-$ROOT}"
-BLOCK="$ROOT/${CLAUDE_PLUGIN_ROOT}/shared/templates/claude-md-hitl-block.md"
+BLOCK="${CLAUDE_PLUGIN_ROOT}/shared/templates/claude-md-hitl-block.md"
 SCRIPT="$ROOT/shared/tools/hitl-onboarding/ensure_claude_block.py"
 if [[ -f "$BLOCK" && -f "$SCRIPT" ]]; then
   python3 "$SCRIPT" CLAUDE.md "$BLOCK" || true   # exit 3 is a warning, not a failure
   [[ -f CLAUDE.md ]] && git add CLAUDE.md
+elif [[ -f "$ROOT/.claude-plugin/plugin.json" ]]; then
+  # A real plugin is installed, so the template SHOULD be here. Saying "not in this build" would
+  # dress a path defect up as a legitimate absence — which is exactly how the doubled-root bug
+  # hid for a whole release (#82).
+  echo "UNEXPECTED: plugin found at $ROOT but no block template at $BLOCK." >&2
+  echo "  The CLAUDE.md section was NOT installed. Report this — do not ignore it." >&2
 else
   echo "No HITL block template in this plugin build — skipping."
 fi

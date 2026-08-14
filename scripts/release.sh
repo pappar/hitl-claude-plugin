@@ -21,6 +21,45 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SOURCE_DIR="${HITL_SOURCE_DIR:-${1:-$PLUGIN_DIR/../hitl-dev-platform}}"
 
+# ── Step 0: Release gate ──────────────────────────────────────────────────────
+# This script IS the act of publishing. Everything else in HITL — the release workflow, the
+# adversarial_review step, /hitl:dev-validate — binds to a change file in the SOURCE repo, and this
+# repo has no .hitl at all. So an operator who finishes work under an ordinary development change,
+# bumps the version, and runs this script publishes with every tool reporting green and no review
+# having happened. That is not a hypothetical: it is how every release to date shipped.
+#
+# The gate belongs on the action that publishes. Fail closed here, or it does not bind.
+#
+# HITL_RELEASE_GATE=off is a deliberate, visible escape for bootstrapping — it prints what it
+# skipped. It is not a default and it is not quiet.
+echo "=== Step 0: Release gate ==="
+CHANGE="$SOURCE_DIR/.hitl/current-change.yaml"
+GATE="$SOURCE_DIR/ci/adversarial/check_review.py"
+if [[ "${HITL_RELEASE_GATE:-on}" == "off" ]]; then
+  echo "  SKIPPED — HITL_RELEASE_GATE=off. Publishing with no adversarial-review check." >&2
+elif [[ ! -f "$GATE" ]]; then
+  echo "ERROR: release gate not found at $GATE — refusing to publish." >&2
+  echo "  A missing gate is not a passing gate." >&2
+  exit 2
+elif [[ ! -f "$CHANGE" ]]; then
+  echo "ERROR: no active change in $SOURCE_DIR — refusing to publish." >&2
+  echo "  Start one with /hitl:dev-start-change and choose the 'release' workflow." >&2
+  exit 2
+else
+  WF=$(python3 -c "import yaml,sys;d=yaml.safe_load(open('$CHANGE'));print((d.get('workflow') or {}).get('id',''))" 2>/dev/null || echo "")
+  if [[ "$WF" != "release" ]]; then
+    echo "ERROR: the active change is '${WF:-unknown}', not 'release' — refusing to publish." >&2
+    echo "  Publishing under a development change is how a release skips its own gate." >&2
+    exit 2
+  fi
+  python3 "$GATE" --root "$SOURCE_DIR" --change "$CHANGE" --reviews "$SOURCE_DIR/.hitl/reviews" || {
+    echo "" >&2
+    echo "Refusing to publish: the release gate did not pass." >&2
+    exit 2
+  }
+fi
+echo ""
+
 # ── Step 1: Build ─────────────────────────────────────────────────────────────
 echo "=== Step 1: Build ==="
 bash "$SCRIPT_DIR/build.sh" "${SOURCE_DIR}"

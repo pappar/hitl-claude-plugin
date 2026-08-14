@@ -315,6 +315,15 @@ fi
 # init-project.sh runs the same file from source. One implementation, two callers.
 # Hashes of every test file HITL has ever synced into a product repo. dev-update deletes a stale
 # synced test only on an exact content match, so a team's same-named file is never destroyed.
+# Release gate: the adversarial-review validator, shipped so a product repo's CI can run it the
+# same way it runs the First Pass validator.
+if [[ -d "$SOURCE_DIR/ci/adversarial" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/ci/adversarial"
+  find "$SOURCE_DIR/ci/adversarial" -maxdepth 1 -name "*.py" ! -name "test_*" ! -name "conftest.py" | while read -r src; do
+    cp "$src" "$PLUGIN_DIR/shared/ci/adversarial/$(basename "$src")"
+    echo "  shared/ci/adversarial/$(basename "$src")"
+  done
+fi
 if [[ -f "$SOURCE_DIR/ci/retired-tests.sha256" ]]; then
   mkdir -p "$PLUGIN_DIR/shared/ci"
   cp "$SOURCE_DIR/ci/retired-tests.sha256" "$PLUGIN_DIR/shared/ci/retired-tests.sha256"
@@ -391,11 +400,14 @@ if [[ -f "$SOURCE_DIR/ci/workflows/first-pass-check.yml" ]]; then
 fi
 
 # ── Shared prose ──────────────────────────────────────────────────────────────
+SHARED_PROSE=(challenge-stance.md adversarial-review.md skip-record.md)
 echo "Syncing shared prose..."
-if [[ -f "$SOURCE_DIR/ai/shared/challenge-stance.md" ]]; then
-  cp "$SOURCE_DIR/ai/shared/challenge-stance.md" "$PLUGIN_DIR/shared/challenge-stance.md"
-  echo "  shared/challenge-stance.md"
-fi
+for prose in "${SHARED_PROSE[@]}"; do
+  if [[ -f "$SOURCE_DIR/ai/shared/$prose" ]]; then
+    cp "$SOURCE_DIR/ai/shared/$prose" "$PLUGIN_DIR/shared/$prose"
+    echo "  shared/$prose"
+  fi
+done
 if [[ -f "$SOURCE_DIR/CHANGELOG.md" ]]; then
   cp "$SOURCE_DIR/CHANGELOG.md" "$PLUGIN_DIR/CHANGELOG.md"
   echo "  CHANGELOG.md"
@@ -436,7 +448,6 @@ find "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" \
   sed -i '' \
     -e 's|ai/shared/templates/|shared/templates/|g' \
     -e 's|ai/claude/generate-docs/templates/|shared/templates/|g' \
-    -e 's|ai/shared/challenge-stance\.md|shared/challenge-stance.md|g' \
     -e 's|ai/claude/dev-practices/|skills/dev-practices/|g' \
     -e 's|ai/claude/apply-change/|skills/dev-apply-change/|g' \
     "$f"
@@ -448,17 +459,25 @@ find "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" \
     -e 's|\${CLAUDE_PLUGIN_ROOT}/shared/|shared/|g' \
     -e 's|\${CLAUDE_PLUGIN_ROOT}/skills/|skills/|g' \
     -e 's|shared/templates/|${CLAUDE_PLUGIN_ROOT}/shared/templates/|g' \
-    -e 's|shared/challenge-stance\.md|${CLAUDE_PLUGIN_ROOT}/shared/challenge-stance.md|g' \
     -e 's|skills/dev-practices/|${CLAUDE_PLUGIN_ROOT}/skills/dev-practices/|g' \
     -e 's|skills/dev-apply-change/|${CLAUDE_PLUGIN_ROOT}/skills/dev-apply-change/|g' \
     "$f"
+  # Every top-level shared prose file, flattened then prefixed. A hardcoded per-file list is how
+  # adversarial-review.md shipped with a bare path that resolved against the user's project.
+  for prose in "${SHARED_PROSE[@]}"; do
+    sed -i '' \
+      -e "s|ai/shared/${prose}|shared/${prose}|g" \
+      -e "s|\${CLAUDE_PLUGIN_ROOT}/shared/${prose}|shared/${prose}|g" \
+      -e "s|shared/${prose}|\${CLAUDE_PLUGIN_ROOT}/shared/${prose}|g" \
+      "$f"
+  done
   # Pass 3: collapse double prefixes. Source text that already carries a
   # "$PLUGIN_ROOT/shared/..." runtime path gets ${CLAUDE_PLUGIN_ROOT}/ inserted by
   # pass 2, producing "$PLUGIN_ROOT/${CLAUDE_PLUGIN_ROOT}/shared/..." — a path that
   # resolves nowhere in the installed layout (found by the 2026-07-12 v1.1.0 round-5
   # validation). ${CLAUDE_PLUGIN_ROOT} alone is the canonical installed-plugin form.
   sed -i '' \
-    -e 's|\$PLUGIN_ROOT/\${CLAUDE_PLUGIN_ROOT}/|${CLAUDE_PLUGIN_ROOT}/|g' \
+    -e 's|\$[A-Za-z_][A-Za-z_0-9]*/\${CLAUDE_PLUGIN_ROOT}/|${CLAUDE_PLUGIN_ROOT}/|g' \
     -e 's|\${CLAUDE_PLUGIN_ROOT}/\${CLAUDE_PLUGIN_ROOT}/|${CLAUDE_PLUGIN_ROOT}/|g' \
     "$f"
 done
@@ -467,7 +486,7 @@ done
 
 # Guard: mangled relative+CLAUDE_PLUGIN_ROOT links (e.g. ../../../${CLAUDE_PLUGIN_ROOT}/...)
 echo "Checking for mangled relative plugin paths..."
-mangled=$(grep -rl -e '\.\./.*\${CLAUDE_PLUGIN_ROOT}' -e 'PLUGIN_ROOT/\${CLAUDE_PLUGIN_ROOT}' \
+mangled=$(grep -rlE -e '\.\./.*\$\{CLAUDE_PLUGIN_ROOT\}' -e '\$[A-Za-z_][A-Za-z_0-9]*/\$\{CLAUDE_PLUGIN_ROOT\}' \
   "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" 2>/dev/null || true)
 if [[ -n "$mangled" ]]; then
   echo "ERROR: found relative paths combined with \${CLAUDE_PLUGIN_ROOT}:" >&2
