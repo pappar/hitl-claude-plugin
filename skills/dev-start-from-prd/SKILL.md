@@ -6,6 +6,15 @@ disable-model-invocation: true
 
 # Start a New Project (PRD)
 
+## Contents
+
+- [Step 0 — Wire up HITL hooks](#step-0--wire-up-hitl-hooks-once-per-project) — also the single definition of the hook-wrapper body, referenced by the other onboarding skills
+- [Step 1 — Customize CLAUDE.md](#step-1--customize-claudemd)
+- [Step 2 — Initialize the system manifest](#step-2--initialize-the-system-manifest)
+- [Step 3 — Create your first GitHub issue](#step-3--create-your-first-github-issue)
+- [Step 4 — Confirm ready](#step-4--confirm-ready)
+- [Step 5 — Generate the platform roadmap](#step-5--generate-the-platform-roadmap)
+
 Setting up a new greenfield project for HITL AI-Driven Development. Work through these steps in order — pause after each and wait for confirmation before proceeding.
 
 **Quick sanity check:** If this codebase already has substantial source code, you likely want `/hitl:dev-start-brownfield` instead. If you are migrating from one system to another, use `/hitl:dev-start-migration`. Say so if either applies.
@@ -41,7 +50,7 @@ If not:
    ```
    If the result is `NOT_FOUND`, stop and say: "The HITL plugin was not found in your Claude Code settings. Install it with: `claude plugin marketplace add pappar/hitl-claude-plugin && claude plugin install hitl@hitl`"
 
-2. Create `.hitl/hooks/` and write a wrapper for each of these eight hooks: `welcome`, `hitl-gate`, `check-hitl-context`, `check-domain-boundary`, `rebuild-graph`, `write-session-summary`, `sync-step-to-issue`, `statusline-hitl`. (The shared `_steps.sh` library is sourced by the renderers from the plugin directly — it does not need a wrapper.) Each wrapper discovers the plugin path at runtime — survives plugin updates, reinstalls, and version bumps:
+2. Create `.hitl/hooks/` and write a wrapper for each of these nine hooks: `welcome`, `hitl-gate`, `check-hitl-context`, `first-pass-permissions`, `check-domain-boundary`, `rebuild-graph`, `write-session-summary`, `sync-step-to-issue`, `statusline-hitl`. (The shared `_steps.sh` library is sourced by the renderers from the plugin directly — it does not need a wrapper.) Each wrapper discovers the plugin path at runtime — survives plugin updates, reinstalls, and version bumps:
    ```bash
    #!/usr/bin/env bash
    # Resolve a working Python. On Windows `python3` is the Microsoft Store stub (on PATH but
@@ -83,20 +92,29 @@ If not:
      "hooks": {
        "SessionStart": [{ "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.hitl/hooks/hitl-gate.sh\"" }] }],
        "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.hitl/hooks/welcome.sh\"" }] }],
-       "PreToolUse": [{ "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.hitl/hooks/check-hitl-context.sh\"" }] }],
+       "PreToolUse": [{ "matcher": "Edit|Write", "hooks": [
+         { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.hitl/hooks/check-hitl-context.sh\"" },
+         { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.hitl/hooks/first-pass-permissions.sh\"" }
+       ]}, { "matcher": "Read|Grep|Glob", "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.hitl/hooks/first-pass-permissions.sh\"" }] }],
        "PostToolUse": [{ "matcher": "Edit|Write", "hooks": [
          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.hitl/hooks/check-domain-boundary.sh\"" },
          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.hitl/hooks/rebuild-graph.sh\"" },
          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.hitl/hooks/sync-step-to-issue.sh\"" }
        ]}],
        "Stop": [{ "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.hitl/hooks/write-session-summary.sh\"" }] }]
-     }
+     },
+     "permissions": { "allow": ["Bash(git add *)"],
+       "deny": ["Read(./.env)", "Read(./.env.*)", "Read(./**/.env)", "Read(./secrets/**)"] }
    }
    ```
 
 4. Update `.gitignore` so session logs don't end up in the product repo — add the entry if not already present:
    ```bash
    grep -q "docs/session-logs" .gitignore 2>/dev/null || printf '\n# HITL session logs — operational artifacts, not product code\ndocs/session-logs/\n' >> .gitignore
+   # `.hitl/` itself is COMMITTED — current-change.yaml is the handoff record and the first-pass CI
+   # gate reads it from the checkout. Only transient working files are ignored (note `.hitl/backups/`
+   # is where ops-backup-database writes database dumps).
+   grep -q "first-pass-choices" .gitignore 2>/dev/null || printf '\n# HITL transient working state — the change file and skip ledger ARE committed\n.hitl/*.tmp\n.hitl/*.migrated\n.hitl/first-pass-choices.json\n.hitl/backups/\n' >> .gitignore
    ```
 
 5. Copy default ADR stubs into `docs/02-design/technical/adrs/` — skip any file that already exists (never overwrite existing ADRs):
