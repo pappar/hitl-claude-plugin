@@ -53,6 +53,28 @@ claude plugin update hitl@hitl
 
 ---
 
+## Step 2.5 — Re-read this skill from the version you just installed
+
+**Do this before anything else, unconditionally.** You are executing the `SKILL.md` that was loaded
+when the command started — the version you are updating *from*. Step 2 has just installed a
+different one, whose `dev-update` may fix or change every step below. If you continue from the copy
+in your context, a fix that ships **inside** `dev-update` never runs on the update that delivers it;
+it waits for the next release. Worse, a step that was later found to be *unsafe* still runs.
+
+This step is deliberately placed before the version comparison, because both of its outcomes jump
+onward and would skip anything after them.
+
+```bash
+NEW_SKILL=$(python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')));[print(os.path.join(i['installPath'],'skills/dev-update/SKILL.md')) for i in d.get('plugins',{}).get('hitl@hitl',[]) if os.path.isfile(os.path.join(i.get('installPath',''),'.claude-plugin/plugin.json'))]" 2>/dev/null | head -1)
+echo "$NEW_SKILL"
+```
+
+**Read that file now, and execute its steps from Step 3 onward instead of the ones in your
+context.** Where the two differ, the file wins — it is the version the user just chose to install.
+If the path is empty or unreadable, say so and continue with the steps you have.
+
+---
+
 ## Step 3 — Read the new version
 
 Run:
@@ -91,13 +113,12 @@ claude plugin marketplace update hitl
 claude plugin update hitl@hitl
 ```
 
-Then re-read the version (repeat the python3 block above). If it still hasn't changed, the installed commit SHA already matches what the marketplace advertises — the user is genuinely on the latest. Say: "Already on the latest version — no changes." and stop.
+Then re-read the version (repeat the python3 block above). If it still hasn't changed, the installed commit SHA already matches what the marketplace advertises — the user is genuinely on the latest. Say: "Already on the latest version." Then **continue to Step 3b anyway — do not stop.**
+
+Stopping here was a real defect. Steps 3b and 4.x do not update the plugin; they reconcile *this repo* with the installed plugin — hooks, validators, `CLAUDE.md`, and the cleanup of files an earlier version installed. Every one is idempotent. Skipping them on "already latest" meant a repo could never be repaired once its version matched, which is exactly the state a user is in when they run the command a second time to fix something.
 
 If it changed after the cache bust, continue to Step 4.
 
-Show: "Updated: **v\<old\>** → **v\<new\>**"
-
-Then show the relevant `## [<new-version>]` section from `CHANGELOG.md` in the plugin directory. If `CHANGELOG.md` is not present, say: "Full release notes: https://github.com/Prasad-Apparaju/hitl-dev-platform/blob/main/CHANGELOG.md"
 
 ---
 
@@ -218,25 +239,49 @@ else
     echo "  ✓ ci/manifest-drift/ refreshed"
   fi
   # Remove dev-repo test suites that earlier versions synced in (plugin issue #29). They resolve
-  # paths like ai/shared/workflows.yaml that exist only in the platform repo, so in a product repo
-  # they fail on collection and block the consumer's CI. Deleting by EXACT shipped filename, never
-  # a test_*.py glob — a team's own tests in these directories must survive.
-  removed=0
-  for stale in \
-    ci/first-pass/test_check_skips.py ci/first-pass/test_driver_e2e.py ci/first-pass/test_first_pass_lib.py \
-    ci/manifest-agentic/test_check_manifest_agentic.py ci/manifest-agentic/test_schema_and_examples.py \
-    tools/manifest-agentic/test_gen_baseline_evals.py tools/manifest-agentic/test_generate_views.py \
-    ci/manifest-drift/test_check_manifest_drift.py \
-    ci/agentic-advisor/test_advisor_e2e.py ci/agentic-advisor/test_catalog_lint.py \
-    ci/agentic-advisor/test_compose.py ci/agentic-advisor/test_records.py \
-    ci/agentic-advisor/test_render_map.py; do
-    if [[ -f "$stale" ]]; then
-      git rm -q --cached "$stale" 2>/dev/null || true
-      rm -f "$stale"
-      removed=$((removed + 1))
-    fi
-  done
-  [[ $removed -gt 0 ]] && echo "  ✓ removed $removed stale HITL test file(s) that could not run in this repo"
+  # paths that exist only in the platform repo, so in a product repo they fail on collection and
+  # block the consumer's CI.
+  #
+  # A filename is NOT evidence of authorship. A team writing tests for the shipped validator
+  # check_skips.py names theirs test_check_skips.py — pytest convention — and this very step, by
+  # removing the shipped tests, invites them to. Deleting on name alone destroys that file with no
+  # recovery path when it is untracked. So a file is removed only when it is BOTH tracked in this
+  # repo AND hashes to a version HITL actually shipped. Anything else is reported, never deleted.
+  HASHES="$ROOT/shared/ci/retired-tests.sha256"
+  if [[ -f "ai/claude/start-change/SKILL.md" ]]; then
+    :  # This is the HITL platform repo itself, where these tests are the real suite. Never touch them.
+  elif [[ ! -f "$HASHES" ]]; then
+    echo "  (no retired-test manifest in this plugin build — skipping stale-test cleanup)"
+  else
+    removed=(); kept=()
+    while IFS= read -r stale; do
+      [[ -f "$stale" && ! -L "$stale" ]] || continue
+      git ls-files --error-unmatch "$stale" >/dev/null 2>&1 || continue   # untracked => not ours
+      if command -v shasum >/dev/null 2>&1; then h=$(shasum -a 256 "$stale" | awk '{print $1}')
+      elif command -v sha256sum >/dev/null 2>&1; then h=$(sha256sum "$stale" | awk '{print $1}')
+      else echo "  (no sha256 tool — skipping stale-test cleanup; nothing was deleted)"; break; fi
+      # Match hash AND basename: the manifest is hash->basename, so hash alone would let content
+      # shipped as file A delete a file at path B.
+      if grep -qi "^$h  $(basename "$stale")$" "$HASHES"; then
+        git rm -q --cached "$stale" 2>/dev/null || true
+        if rm -f "$stale" 2>/dev/null && [[ ! -e "$stale" ]]; then removed+=("$stale"); fi
+      else
+        kept+=("$stale")
+      fi
+    done < <(printf '%s\n' \
+      ci/first-pass/test_check_skips.py ci/first-pass/test_driver_e2e.py ci/first-pass/test_first_pass_lib.py \
+      ci/manifest-agentic/test_check_manifest_agentic.py ci/manifest-agentic/test_schema_and_examples.py \
+      tools/manifest-agentic/test_gen_baseline_evals.py tools/manifest-agentic/test_generate_views.py \
+      ci/manifest-drift/test_check_manifest_drift.py \
+      ci/agentic-advisor/test_advisor_e2e.py ci/agentic-advisor/test_catalog_lint.py \
+      ci/agentic-advisor/test_compose.py ci/agentic-advisor/test_records.py \
+      ci/agentic-advisor/test_render_map.py)
+    for f in ${removed[@]+"${removed[@]}"}; do echo "  ✓ removed $f (HITL test that cannot run in this repo)"; done
+    for f in ${kept[@]+"${kept[@]}"}; do
+      echo "  • kept $f — same name as a HITL test but different content, so it is yours or you edited it." >&2
+      echo "    If it is a leftover HITL test it will fail here; delete it yourself once you have looked." >&2
+    done
+  fi
 
   # stage ONLY the paths that exist — a single `git add` over an absent optional path errors on the whole
   # pathspec and (with `|| true`) would silently stage NOTHING (codex-7).
