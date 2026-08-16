@@ -452,10 +452,11 @@ find "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" \
     -e 's|ai/claude/apply-change/|skills/dev-apply-change/|g' \
     "$f"
   # Protect paths that are deliberately built from a variable the STEP resolves at runtime.
-  # dev-update resolves $ROOT itself (CLAUDE_PLUGIN_ROOT is not in the Bash tool environment), so
+  # dev-update resolves $ROOT and the brownfield survey resolves $PLUGIN_ROOT, because
+  # CLAUDE_PLUGIN_ROOT is not in the Bash tool environment. Any such $VAR/shared/ must survive, so
   # "$ROOT/shared/..." must survive verbatim. Pass 2 would prefix it and pass 3 would then eat the
   # "$ROOT/", silently deleting the resolution and shipping a path that expands to "/shared/...".
-  sed -i '' -e 's|\$ROOT/shared/|@@KEEP_ROOT_SHARED@@|g' "$f"
+  sed -i '' -E 's|\$([A-Za-z_][A-Za-z_0-9]*)/shared/|@@KEEP_\1@@|g' "$f"
   # Pass 2: add ${CLAUDE_PLUGIN_ROOT}/ prefix to plugin-bundled paths.
   # Strip any existing prefix first (idempotency — makes this safe to re-run),
   # then add. \b not available in BSD sed, so we rely on pass 1 having
@@ -486,7 +487,7 @@ find "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" \
     -e 's|\${CLAUDE_PLUGIN_ROOT}/\${CLAUDE_PLUGIN_ROOT}/|${CLAUDE_PLUGIN_ROOT}/|g' \
     "$f"
   # Restore the protected runtime variable now that both prefixing passes are done.
-  sed -i '' -e 's|@@KEEP_ROOT_SHARED@@|$ROOT/shared/|g' "$f"
+  sed -i '' -E 's|@@KEEP_([A-Za-z_][A-Za-z_0-9]*)@@|$\1/shared/|g' "$f"
 done
 
 # ── Post-build checks ────────────────────────────────────────────────────────
