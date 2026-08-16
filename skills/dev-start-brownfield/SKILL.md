@@ -301,7 +301,7 @@ If no CI/CD config exists, or the build fails and cannot be quickly fixed, say:
 
 If they want a scaffold, generate a minimal CI/CD config (build → test → deploy-to-staging) using the tech stack from Step 2 and the deployment target from the deployment view. Do not include a production deploy job without an explicit approval gate.
 
-**Persist the verdicts (required):** copy `"${CLAUDE_PLUGIN_ROOT}/shared/templates/platform-readiness-template.yaml"`
+**Persist the verdicts (required):** copy `"$PLUGIN_ROOT/shared/templates/platform-readiness-template.yaml"`
 to `docs/04-operations/platform-readiness.yaml` if missing, set `project_kind: brownfield`,
 and record this step's verdicts there: `E1` (build reproducible), `E3` (staging deploy from
 CI), `D1` (suites run in CI and can fail) — evidence rules are in the template header. The
@@ -369,7 +369,7 @@ The 31-step workflow queries these two registries at multiple points. They must 
 - For each answer, add one entry with `description`, `domain` (best guess), and `date`.
 - If they have nothing: create an empty stub and say: "You can add entries later — after each production incident, run `/hitl:ops-incident`."
 
-**Product baseline** (`docs/01-product/prd.md`): the PM and QA skills read the PRD for personas and requirements, so a brownfield project with no PRD leaves them nowhere to land. Initialize the PRD *shell*, not a retroactive spec of existing behaviour (that lives in the reverse-engineered technical docs), only personas and format so the next requirement has a home. If `docs/01-product/prd.md` is missing and `$PLUGIN_ROOT` (Step 3) is set, run `mkdir -p docs/01-product && cp "${CLAUDE_PLUGIN_ROOT}/shared/templates/prd-template.md" docs/01-product/prd.md`. Then ask "Who are the primary users of this system, and what does each need?" and fill §3 (Target Users and Personas); leave §5 (Functional Requirements) empty, noted "No requirements yet — added via `/hitl:pm-add-feature`." Say: "Product baseline initialized; PM and QA skills are now active."
+**Product baseline** (`docs/01-product/prd.md`): the PM and QA skills read the PRD for personas and requirements, so a brownfield project with no PRD leaves them nowhere to land. Initialize the PRD *shell*, not a retroactive spec of existing behaviour (that lives in the reverse-engineered technical docs), only personas and format so the next requirement has a home. If `docs/01-product/prd.md` is missing and `$PLUGIN_ROOT` (Step 3) is set, run `mkdir -p docs/01-product && cp "$PLUGIN_ROOT/shared/templates/prd-template.md" docs/01-product/prd.md`. Then ask "Who are the primary users of this system, and what does each need?" and fill §3 (Target Users and Personas); leave §5 (Functional Requirements) empty, noted "No requirements yet — added via `/hitl:pm-add-feature`." Say: "Product baseline initialized; PM and QA skills are now active."
 
 ---
 
@@ -426,6 +426,21 @@ Update `.hitl/current-change.yaml` — set `current_step`:
   number: 11
   name: "Confirm ready"
   phase: "Brownfield Setup"
+```
+
+**Before the closing message, exclude persona profiles from git.** `.hitl/people/` holds
+descriptions of named colleagues. Committed, they land in PR diffs and stay in history after
+deletion. `init-project.sh` adds this rule and a plugin-installed team never runs that script, so
+it has to happen here.
+
+```bash
+GITIGNORE=".gitignore"
+if ! grep -q "^\.hitl/people/" "$GITIGNORE" 2>/dev/null; then
+  printf '\n# HITL persona profiles — descriptions of people. Local unless your team decides otherwise.\n.hitl/people/\n' >> "$GITIGNORE"
+fi
+git check-ignore -q .hitl/people/ 2>/dev/null \
+  && echo "✓ .gitignore — .hitl/people/ excluded" \
+  || echo "COULD NOT exclude .hitl/people/ — say so before any profile is written here."
 ```
 
 Output this exactly:

@@ -14,6 +14,24 @@ Adapt your behavioral mode based on the answer:
 
 Do not assume Developer mode by default.
 
+## Communication Preferences
+
+If this file contains a block delimited by the HITL:PREFS:BEGIN and HITL:PREFS:END markers (each on
+its own line), follow it — unless its marker reads `status: PAUSED`, ignore it entirely and behave
+as default HITL.
+
+**A preference shapes form, never substance.** Risks, costs, uncertainties, and decisions that are
+theirs get said whatever the style setting — briefly if that is the preference, never omitted.
+
+If they say "default mode" or "ignore my preferences", drop the block for the rest of the session
+and do not edit the file for a temporary request.
+
+If someone says you are too verbose, too terse, or over-explaining, offer `/hitl:dev-preferences`
+once — four questions, this project only, adjustable and removable. Take no for an answer and write
+nothing. Never infer preferences and record them unasked.
+
+To draft a message *for someone else*, use `/hitl:dev-draft-for <person>`.
+
 ## Getting Started
 
 **This project uses HITL.** Delivery follows a defined, recorded process rather than an improvised one. `/hitl:dev-start-change` is the front door for every piece of work — features, bug fixes, refactors, spikes.

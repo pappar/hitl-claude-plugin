@@ -157,7 +157,7 @@ for m in installed_plugins.json "command -v" HITL_PY; do grep -q "$m" .hitl/hook
 [[ -f .hitl/hooks/first-pass-permissions.sh ]] || echo "STALE: first-pass-permissions.sh absent"
 ```
 
-No `installed_plugins.json` = pre-v1.0.9 discovery, broken on current Claude Code. No `command -v` probe or `HITL_PY` = pre-issue-#14: a bare `python3` is the Microsoft Store stub on Windows, on PATH but running nothing, so every hook silently no-ops — and a lone `installed_plugins.json` grep passes straight over it. No `first-pass-permissions.sh` = pre-CR-15, so the permission policy never engages. On any of those, delete `.hitl/hooks/` and re-create all **nine** wrappers (`welcome`, `hitl-gate`, `check-hitl-context`, `first-pass-permissions`, `check-domain-boundary`, `rebuild-graph`, `write-session-summary`, `sync-step-to-issue`, `statusline-hitl`) from the template in Step 0 of `/hitl:dev-start-from-prd`, which is the single source of truth for wrapper contents.
+No `installed_plugins.json` = pre-v1.0.9 discovery, broken on current Claude Code. No `command -v` probe or `HITL_PY` = pre-issue-#14: a bare `python3` is the Microsoft Store stub on Windows, on PATH but running nothing, so every hook silently no-ops — and a lone `installed_plugins.json` grep passes straight over it. No `first-pass-permissions.sh` = pre-CR-15, so the permission policy never engages. On any of those, delete `.hitl/hooks/` and re-create all **nine** wrappers (`welcome`, `hitl-gate`, `check-hitl-context`, `first-pass-permissions`, `check-domain-boundary`, `rebuild-graph`, `write-session-summary`, `sync-step-to-issue`, `statusline-hitl`) from the template in Step 0 of `/hitl:dev-start-from-prd` (**sub-steps 1-3 only**: create the wrappers, then come straight back here to Step 4.5. Ignore its closing "restart and re-run this command" instruction — that is written for onboarding, and following it here skips Steps 4.5 through 4.9 and the completion message, with no sign anything was missed), which is the single source of truth for wrapper contents.
 
 Also check `.claude/settings.json` for the `$CLAUDE_PROJECT_DIR` fix, the `statusLine` entry, and the `SessionStart` → `hitl-gate.sh` hook. Assert what `statusLine` **points at**, not merely that the key is present:
 ```bash
@@ -248,9 +248,17 @@ else
   if [[ -d "$ROOT/shared/ci/manifest-agentic" ]]; then
     mkdir -p ci/manifest-agentic tools/manifest-agentic
     cp "$ROOT/shared/ci/manifest-agentic/"*.py ci/manifest-agentic/ 2>/dev/null
-    [[ ! -f ci/manifest-agentic/manifest-waivers.yaml && -f "$ROOT/shared/ci/manifest-agentic/manifest-waivers.yaml" ]] && cp "$ROOT/shared/ci/manifest-agentic/manifest-waivers.yaml" ci/manifest-agentic/
+    # Report what actually happened. This printed "kept your manifest-waivers.yaml" even when it
+    # had just created one, which is a claim about the user's own file that was simply untrue.
+    WAIVERS_NOTE="no waivers file"
+    if [[ -f ci/manifest-agentic/manifest-waivers.yaml ]]; then
+      WAIVERS_NOTE="kept your manifest-waivers.yaml"
+    elif [[ -f "$ROOT/shared/ci/manifest-agentic/manifest-waivers.yaml" ]]; then
+      cp "$ROOT/shared/ci/manifest-agentic/manifest-waivers.yaml" ci/manifest-agentic/
+      WAIVERS_NOTE="added a starter manifest-waivers.yaml"
+    fi
     cp "$ROOT/shared/tools/manifest-agentic/"*.py tools/manifest-agentic/ 2>/dev/null
-    echo "  ✓ ci/manifest-agentic/ (compound-agentic validator) synced — kept your manifest-waivers.yaml"
+    echo "  ✓ ci/manifest-agentic/ (compound-agentic validator) synced — $WAIVERS_NOTE"
   fi
   # Release gate (#80): the adversarial-review validator, so a repo's own CI can run it.
   if [[ -d "$ROOT/shared/ci/adversarial" ]]; then
@@ -346,7 +354,9 @@ Without the opt-out file, "install anything absent" would resurrect a deliberate
 every update. One path per line, `#` comments allowed (e.g. `best-practices/tenant-isolation.yaml`).
 
 ```bash
-ROOT="${CLAUDE_PLUGIN_ROOT:-$ROOT}"
+# Same self-contained resolution: $ROOT from an earlier step is not in scope here.
+ROOT="${CLAUDE_PLUGIN_ROOT:-}"
+[[ -z "$ROOT" ]] && ROOT=$(python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')));[print(i['installPath']) for i in d.get('plugins',{}).get('hitl@hitl',[]) if os.path.isfile(os.path.join(i.get('installPath',''),'.claude-plugin/plugin.json'))]" 2>/dev/null | head -1)
 if [[ -z "$ROOT" || ! -d "$ROOT/shared/semgrep" ]]; then
   echo "No shipped rule set found — skipping semgrep re-sync."
 else
@@ -424,8 +434,12 @@ Never overwrites the team's file: it maintains one marker-delimited block. Creat
 refreshes, or stays silent if current; a truncated `HITL:BEGIN` leaves the file untouched (exit 3).
 
 ```bash
-ROOT="${CLAUDE_PLUGIN_ROOT:-$ROOT}"
-BLOCK="${CLAUDE_PLUGIN_ROOT}/shared/templates/claude-md-hitl-block.md"
+# Resolve the plugin root HERE. Shell state does not persist between tool calls, so inheriting
+# $ROOT from Step 4.6 left it empty: the template lookup failed and this step printed "not in this
+# build — skipping", which is false and benign-sounding, while Step 5 reported a successful update.
+ROOT="${CLAUDE_PLUGIN_ROOT:-}"
+[[ -z "$ROOT" ]] && ROOT=$(python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')));[print(i['installPath']) for i in d.get('plugins',{}).get('hitl@hitl',[]) if os.path.isfile(os.path.join(i.get('installPath',''),'.claude-plugin/plugin.json'))]" 2>/dev/null | head -1)
+BLOCK="$ROOT/shared/templates/claude-md-hitl-block.md"
 SCRIPT="$ROOT/shared/tools/hitl-onboarding/ensure_claude_block.py"
 if [[ -f "$BLOCK" && -f "$SCRIPT" ]]; then
   python3 "$SCRIPT" CLAUDE.md "$BLOCK" || true   # exit 3 is a warning, not a failure
@@ -438,6 +452,42 @@ elif [[ -f "$ROOT/.claude-plugin/plugin.json" ]]; then
   echo "  The CLAUDE.md section was NOT installed. Report this — do not ignore it." >&2
 else
   echo "No HITL block template in this plugin build — skipping."
+fi
+```
+
+---
+
+## Step 4.9 — Ensure persona profiles are gitignored
+
+`.hitl/people/` holds descriptions of named colleagues, and `${CLAUDE_PLUGIN_ROOT}/shared/personas.md` promises they are
+**local by default**. Onboarding is what makes that true, so a project upgrading into this feature
+gets the commands and none of the protection: the first profile saved lands in a PR diff and stays
+in history after deletion. Same idempotent check onboarding uses; running it twice adds nothing.
+
+```bash
+GITIGNORE=".gitignore"
+if ! grep -q "^\.hitl/people/" "$GITIGNORE" 2>/dev/null; then
+  printf '\n# HITL persona profiles — descriptions of people. Local unless your team decides otherwise.\n.hitl/people/\n' >> "$GITIGNORE"
+  git add "$GITIGNORE" 2>/dev/null || true
+fi
+# Verify, do not assert. .gitignore has no effect on a file git already tracks, and outside a repo
+# check-ignore fails in a way that reads as "not ignored".
+if git check-ignore -q .hitl/people/ 2>/dev/null; then
+  echo "✓ .gitignore — .hitl/people/ excluded"
+else
+  echo "COULD NOT exclude .hitl/people/. Do not tell anyone a profile written here is local."
+fi
+```
+
+**If a profile is already tracked**, the rule does not untrack it. Say so and let them decide:
+
+```bash
+TRACKED=$(git ls-files '.hitl/people/' 2>/dev/null)
+if [[ -n "$TRACKED" ]]; then
+  echo "NOTE: these profiles are already tracked, so the ignore rule does not cover them:"
+  echo "$TRACKED" | sed 's/^/  /'
+  echo "  They are in git history. 'git rm --cached' stops future commits but does not remove the past."
+  echo "  Tell the people they describe."
 fi
 ```
 

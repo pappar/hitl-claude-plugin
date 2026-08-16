@@ -55,7 +55,7 @@ try:
 except:pass
 " 2>/dev/null)
 [[ ! -f docs/04-operations/token-cost-registry.yaml ]] && \
-  cp "${CLAUDE_PLUGIN_ROOT}/shared/templates/token-cost-registry-template.yaml" \
+  cp "$PLUGIN_ROOT/shared/templates/token-cost-registry-template.yaml" \
      docs/04-operations/token-cost-registry.yaml
 ```
 

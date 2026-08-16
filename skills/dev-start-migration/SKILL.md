@@ -430,6 +430,21 @@ Update `.hitl/current-change.yaml` — set `current_step`:
   phase: "Migration Setup"
 ```
 
+**Before the closing message, exclude persona profiles from git.** `.hitl/people/` holds
+descriptions of named colleagues. Committed, they land in PR diffs and stay in history after
+deletion. `init-project.sh` adds this rule and a plugin-installed team never runs that script, so
+it has to happen here.
+
+```bash
+GITIGNORE=".gitignore"
+if ! grep -q "^\.hitl/people/" "$GITIGNORE" 2>/dev/null; then
+  printf '\n# HITL persona profiles — descriptions of people. Local unless your team decides otherwise.\n.hitl/people/\n' >> "$GITIGNORE"
+fi
+git check-ignore -q .hitl/people/ 2>/dev/null \
+  && echo "✓ .gitignore — .hitl/people/ excluded" \
+  || echo "COULD NOT exclude .hitl/people/ — say so before any profile is written here."
+```
+
 Output this exactly:
 
 ---
@@ -454,7 +469,7 @@ After the review, the architect runs `/hitl:architect-design-system docs/00-migr
 **Before the first development slice begins — generate the platform roadmap:**
 
 Initialize the platform readiness register:
-`mkdir -p docs/04-operations && cp "${CLAUDE_PLUGIN_ROOT}/shared/templates/platform-readiness-template.yaml" docs/04-operations/platform-readiness.yaml`,
+`mkdir -p docs/04-operations && cp "$PLUGIN_ROOT/shared/templates/platform-readiness-template.yaml" docs/04-operations/platform-readiness.yaml`,
 set `project_kind: migration` (this activates the migration-only **Parity** and **Cutover**
 layers: golden-dataset harness, shadow-run, cutover plan with rollback-to-legacy, dual-run
 window, legacy sunset — a migration is not done when the code is ported; it is done when

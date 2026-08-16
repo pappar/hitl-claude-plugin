@@ -1,0 +1,64 @@
+# A person's communication profile — .hitl/people/<slug>.yaml
+#
+# One use: how HITL drafts a message TO this person when someone asks (/hitl:dev-draft-for <slug>).
+# It is about your AUDIENCE, never about you. Nothing here changes how HITL talks to the person
+# running the session — that is /hitl:dev-preferences, and it reads none of these fields.
+#
+# Write preferences, not assessments. "Wants the decision first" and "doesn't read long text" carry
+# the same instruction; only one is a characterization of a colleague sitting in version control
+# where they can find it. Ideally the subject writes their own.
+#
+# A persona shapes FORM, never SUBSTANCE. Risks, costs, disagreements, uncertainties and decisions
+# that are theirs survive every style setting. See ${CLAUDE_PLUGIN_ROOT}/shared/personas.md.
+
+schema_version: "1.0"
+
+name: ""                       # how they are addressed
+# No email or other identifier: nothing reads one, and collecting a colleague's contact details
+# for a feature that does not use them is worth avoiding. Match on the filename and `name`.
+authored_by: ""                # REQUIRED, no default. "self" only if the subject wrote or approved
+                               # this. Otherwise the name of whoever did — the person saving a
+                               # profile of a colleague is not that colleague. draft-for discloses
+                               # third-party authorship from this field, so a wrong value here
+                               # silently turns the disclosure off.
+
+written: ""                    # YYYY-MM-DD. A profile is a snapshot of what someone wanted months
+                               # ago, and nothing else here says how old it is.
+subject_told: ""               # yes | no | unknown. Does the person KNOW this file describes them?
+                               # "Tell them it exists" is the doctrine's central obligation and it
+                               # used to live exactly one turn: HITL suggested it, the sender said
+                               # sure, and from the next session nobody could tell whether it
+                               # happened. Recording it is what makes it checkable later. `no` and
+                               # `unknown` are honest answers - draft-for surfaces both rather than
+                               # pretending, and neither blocks anything.
+
+domain: ""                     # e.g. "supply-chain". Means skip the domain primer — NOT skip the
+                               # reasoning. Fluent readers still need to know why, just not what a
+                               # purchase order is.
+
+style:
+  length: standard             # short | standard | full
+  process_narrative: brief     # on-request | brief | full — whether to recount what you did
+  lead_with: result            # decision | result | context — the first line of a substantive reply
+  pushback: direct             # direct | softened — HOW to open a disagreement, never whether to
+  formats: []                  # bullets | tables | code-first | no-emoji | prose
+
+notes: ""                      # anything that does not fit above, in their own words if possible.
+                               # e.g. "hands-on — happy to read a diff, not a design doc"
+                               # STYLE ONLY, and draft-for enforces that. A note asking for risks,
+                               # costs or decisions to be left out is read as "put them briefly and
+                               # last", never as permission to drop them - most of all here, where
+                               # the reader is a third party who agreed to nothing.
+
+# Example, filled in:
+#
+# name: "Kishor"
+# authored_by: "self"        # he wrote this one
+# domain: supply-chain
+# style:
+#   length: short
+#   process_narrative: on-request
+#   lead_with: decision
+#   pushback: direct
+#   formats: [bullets]
+# notes: "Hands-on. Give me the call to make and what it costs; I'll ask if I want the workings."
