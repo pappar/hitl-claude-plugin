@@ -10,9 +10,15 @@
 schema_version: "1.0"
 change_id: "GH-000"          # must match .hitl/current-change.yaml
 round: 1                     # highest round decides; earlier rounds are history
-lens: ""                     # correctness | consequence | bypass | ... — the skill mandates two
-                             # reviewers per round, so each needs its own record and its own lens.
+lens: ""                     # An id from the catalog in ${CLAUDE_PLUGIN_ROOT}/shared/adversarial-review.md: fitness |
+                             # correctness | consequence | upgrade | security | data | scalability |
+                             # operability | compatibility | bypass | interfaces | user | cost.
+                             # A round is a SET of lenses — each reviewer gets its own record and
+                             # its own lens, because two on the same question find the same things
+                             # twice. Do not number a second one (`consequence-2`): the gate
+                             # resolves that back to `consequence` and reports the duplicate.
                              # If ANY lens in a round says do-not-ship, the round says do-not-ship.
+                             # Two lenses at release is the practice; it is not gate-enforced (#92).
 reviewed_sha: ""             # the commit reviewed. MUST match what ships, or it blocks.
 reviewed_tree: ""            # git rev-parse HEAD^{tree} — lets a squash-merged review still
                              # count when the content is byte-identical and the commit is gone.
@@ -38,6 +44,10 @@ findings: []
 #   reproduction: ""         # the command and observed output. A finding nobody reproduced is a guess.
 #   status: open             # open | fixed | accepted
 #   resolved_by: ""          # commit that fixed it
+#   verified_by: ""          # HOW YOU KNOW it is fixed: the reproduction above, re-run, and what it
+#                            # printed. Not enforced — a commit id says where the fix went, not that
+#                            # it worked, and the check that would have required this was cut in
+#                            # 2.8.0 (#92). Fill it in anyway; the next round reads it.
 #   accepted_by: ""          # required when status is 'accepted' — accepting risk is someone's decision
 
 verdict: do-not-ship         # ship | do-not-ship. Anything but 'ship' blocks the release.

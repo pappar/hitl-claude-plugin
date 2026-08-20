@@ -38,6 +38,31 @@ SEVERITIES = ("CRITICAL", "HIGH", "MEDIUM", "LOW")
 OPEN_STATES = ("open",)
 RESOLVED_STATES = ("fixed", "accepted")
 
+# The lens vocabulary, mirrored from the catalog in ai/shared/adversarial-review.md. Kept here as
+# data rather than read from a file on purpose: this validator is copied into product repos, and
+# `dev-update` copies only *.py into ci/adversarial/ — a catalog file would be absent in every
+# repo onboarded before it existed, which is the "ships to shared/ but nothing copies it in"
+# defect from 2.4.1 and 2.6.2. A test asserts these ids match the catalog.
+LENSES = ("fitness", "correctness", "consequence", "upgrade", "security", "data", "scalability",
+          "operability", "compatibility", "bypass", "interfaces", "user", "cost")
+
+# Older names that still appear in records written before the catalog existed.
+LENS_ALIASES = {"destructiveness": "consequence", "migration": "data", "install": "upgrade",
+                "perf": "scalability", "functionality": "fitness"}
+
+
+def canonical_lens(raw):
+    """Resolve a recorded lens to its catalog id.
+
+    Duplicate detection groups by lens, and it compared raw strings — so a second consequence
+    reviewer filed as `consequence-2` was invisible to it, which is exactly what happened
+    downstream. Strip the disambiguating suffix people reach for, then apply the alias map.
+    """
+    lens = str(raw or "").strip().lower()
+    lens = re.sub(r"[\s_-]*\d+$", "", lens)
+    lens = re.sub(r"[\s_-]*(bis|b|two|second)$", "", lens)
+    return LENS_ALIASES.get(lens, lens)
+
 
 def _fail(findings, code, msg):
     findings.append("[BLOCK] %s: %s" % (code, msg))
@@ -307,7 +332,7 @@ def check(change_path, reviews_dir, sha=None, root="."):
     seen = {}
     for pth, doc in records:
         n = _round((pth, doc))
-        lens = str(doc.get("lens", "")).strip().lower()
+        lens = canonical_lens(doc.get("lens"))
         seen.setdefault((n, lens), []).append(pth)
     dupes = sorted((n, l) for (n, l), paths in seen.items() if len(paths) > 1)
     records.sort(key=_round)
@@ -323,10 +348,55 @@ def check(change_path, reviews_dir, sha=None, root="."):
     for key in dupes:
         n, lens = key
         _fail(out, "DUPLICATE_ROUND",
-              "round %s has more than one record for lens %r (%s) — which governs is decided by "
-              "filename, so a second record can silently override a do-not-ship verdict. Two "
-              "reviewers in one round is expected: give each a distinct `lens:`."
-              % (n, lens or "(unset)", ", ".join(seen[key])))
+              "round %s has more than one record for lens %r (%s). Two reviewers in one round is "
+              "expected — but on DIFFERENT lenses, or they find the same things twice. Names are "
+              "resolved to the catalog id first, so `%s-2` counts as `%s`: pick a second lens from "
+              "the catalog in shared/adversarial-review.md instead of numbering this one."
+              % (n, lens or "(unset)", ", ".join(seen[key]), lens or "x", lens or "x"))
+
+    # An unrecognised lens is information, never a block. Records written before the catalog
+    # existed have to keep validating, and a vocabulary that rejects them would be a reason to
+    # delete the check rather than fix the name.
+    for pth, doc in latest:
+        raw = str(doc.get("lens", "")).strip()
+        if raw and canonical_lens(raw) not in LENSES:
+            warnings.append(
+                "[warn] UNKNOWN_LENS: %s uses lens %r, which is not in the catalog "
+                "(shared/adversarial-review.md). It still counts; the id is what lets the gate "
+                "group reviewers and what tells the next round what was already looked at."
+                % (os.path.basename(pth), raw))
+
+    if top >= 3:
+        warnings.append(
+            "[warn] ROUND_DEPTH: this is round %d. Two rounds then a human decision is the rule — "
+            "round 3 onward is a choice someone makes, not a continuation. Later rounds mostly read "
+            "fixes written minutes earlier, and find the ones that were right about the defect and "
+            "wrong about its class." % top)
+
+    # A finding that survives consecutive rounds is a scope question, not a fix question. Narrowing
+    # the change often dissolves the whole cluster, and it is cheapest before three rounds of
+    # repairs are built on top of it. Compared on the claim, because ids restart per round.
+    by_round = {}
+    for _, doc in records:
+        try:
+            n = int(doc.get("round", 0))
+        except Exception:
+            continue
+        for f in (doc.get("findings") or []):
+            if not isinstance(f, dict):
+                continue
+            claim = re.sub(r"[^a-z0-9 ]", "", str(f.get("claim", "")).lower()).strip()[:60]
+            if claim:
+                by_round.setdefault(n, set()).add(claim)
+    recurring = []
+    for n in sorted(by_round):
+        if n - 1 in by_round:
+            recurring.extend(sorted(by_round[n] & by_round[n - 1])[:3])
+    if recurring:
+        warnings.append(
+            "[warn] RECURRING_FINDING: the same finding appears in consecutive rounds (%s). Two "
+            "rounds blocked by one underlying decision is a scope question for a human, not another "
+            "fix." % "; ".join('"%s..."' % c for c in recurring[:3]))
 
     if dirty:
         head = ", ".join(dirty[:3])
@@ -361,34 +431,46 @@ def check(change_path, reviews_dir, sha=None, root="."):
               "%s: stance must be 'refute'. A reviewer setting out to confirm a design finds it "
               "confirmed" % path)
 
-    findings = rec.get("findings")
-    if findings is None:
-        findings = []
-    if not isinstance(findings, list):
-        _fail(out, "REVIEW_MALFORMED", "%s: findings must be a list" % path)
-        findings = []
+    # EVERY record in the governing round, not just the one whose verdict was selected. Findings
+    # were read off the selected record alone, so a second reviewer's unresolved CRITICAL shipped
+    # unseen whenever the selected record said `ship` — the same shape as the duplicate-lens hole:
+    # two reviewers per round is the design, and half of them were not being read.
+    # Findings are read from the governing round. Carrying earlier rounds forward was tried in
+    # 2.8.0 and cut: four CRITICALs in the only review it ever had, all in how it decided that a
+    # finding had been resolved. Reasoning across rounds needs a model this validator does not
+    # have — see #92. Until then a round says what it says, and the trail is what carries history.
+    findings = []
+    for _p, _doc in latest:
+        _f = _doc.get("findings")
+        if _f is None:
+            _f = []
+        if not isinstance(_f, list):
+            _fail(out, "REVIEW_MALFORMED", "%s: findings must be a list" % _p)
+            continue
+        findings.extend((_p, i, item) for i, item in enumerate(_f))
 
     unresolved = []
-    for i, f in enumerate(findings):
+    for fpath, i, f in findings:
         if not isinstance(f, dict):
-            _fail(out, "REVIEW_MALFORMED", "%s: findings[%d] is not a mapping" % (path, i))
+            _fail(out, "REVIEW_MALFORMED", "%s: findings[%d] is not a mapping" % (fpath, i))
             continue
         sev = str(f.get("severity", "")).strip().upper()
         if sev not in SEVERITIES:
             _fail(out, "REVIEW_MALFORMED",
-                  "%s: findings[%d] severity %r is not one of %s" % (path, i, f.get("severity"), ", ".join(SEVERITIES)))
+                  "%s: findings[%d] severity %r is not one of %s" % (fpath, i, f.get("severity"), ", ".join(SEVERITIES)))
             continue
         state = str(f.get("status", "open")).strip().lower()
         if state not in OPEN_STATES + RESOLVED_STATES:
             _fail(out, "REVIEW_MALFORMED",
-                  "%s: findings[%d] status %r is not open/fixed/accepted" % (path, i, f.get("status")))
+                  "%s: findings[%d] status %r is not open/fixed/accepted" % (fpath, i, f.get("status")))
             continue
         if sev in BLOCKING and state in OPEN_STATES:
             unresolved.append("%s: %s" % (sev, str(f.get("claim", "?"))[:80]))
+
         if state == "accepted" and not str(f.get("accepted_by", "")).strip():
             _fail(out, "UNSIGNED_ACCEPTANCE",
                   "%s: findings[%d] is accepted with no accepted_by — accepting a finding is a "
-                  "decision someone owns" % (path, i))
+                  "decision someone owns" % (fpath, i))
 
     for u in unresolved:
         _fail(out, "FINDING_OPEN", "%s — fix it, or accept it explicitly with accepted_by" % u)
@@ -401,7 +483,7 @@ def check(change_path, reviews_dir, sha=None, root="."):
 
     # Not a block: a genuinely clean change exists. But one round that found nothing, on a large
     # diff, is more often a shallow review than a flawless one — so say so.
-    if _round((path, rec)) <= 1 and not findings:
+    if _round((path, rec)) <= 1 and not findings:  # findings across the whole round
         warnings.append(
             "[warn] SHALLOW_REVIEW: %s is round 1 with zero findings. That happens, but it is also "
             "what a review that did not really run looks like." % path)

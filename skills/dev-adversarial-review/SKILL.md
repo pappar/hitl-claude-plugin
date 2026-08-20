@@ -1,5 +1,5 @@
 ---
-description: Run an independent adversarial review of the current work — spawns clean-context reviewers briefed to refute rather than confirm, collects reproduced findings, and writes the review record the release gate reads. Use at the end of design or code, and before publishing anything to users.
+description: Run an independent adversarial review of the current work — spawns clean-context reviewers briefed to refute rather than confirm, collects reproduced findings, puts them to you before anything is fixed, and writes the review record the release gate reads. Use at the end of design or code, and before publishing anything to users.
 argument-hint: "[what to review — a phase name, paths, or a diff range. Defaults to the whole change.]"
 disable-model-invocation: true
 ---
@@ -47,25 +47,63 @@ Record the sha. Everything below hangs off it.
 
 ## Step 2 — Say what it costs, then start it in the background
 
-Tell the user, briefly: roughly ten minutes, runs in the background, they keep working. Then start.
-Do not wait for permission a second time if they already accepted the offer at a step boundary.
+Tell the user, briefly: **a round** takes roughly ten minutes, runs in the background, they keep
+working. Say that if it finds things there may be more than one round, and that they will see what
+came back before anything is changed. Ten minutes is the cost of a round, not of the review — a
+change that needs three rounds costs a working day, and quoting the round as the whole makes the
+next estimate worthless.
+
+**Say which lenses you would point it at, and why.** They know things about this change you do
+not: that the migration is already covered elsewhere, that nobody has looked at cost yet. Pick the
+plan from the catalog in `${CLAUDE_PLUGIN_ROOT}/shared/adversarial-review.md` — the base pair for the phase you just
+finished, plus whatever the change earns — and name it in one line:
+
+> Design's done. Want an adversarial review before we build? I'd point it at **fitness** (does this
+> actually satisfy FR-12) and **consequence** (it rewrites records in place), plus **security**
+> since it touches the token store. Three lenses, about half an hour, runs in the background. Swap
+> or drop any of them.
+
+This is the same single question, carrying more information. **Do not add a second prompt for plan
+approval** — the offer is the plan. They can answer yes, or yes-with-changes, or no.
+
+They pick **where to look, never what will be found.** Take "drop security, it's covered by the
+pentest" as a deselection and record it; do not pass their reasoning to the reviewers, because a
+brief carrying someone's conclusion gets that conclusion back.
+
+**Write a dropped lens into the record you do write.** Name it in `scope` — *"security lens
+offered and declined"* — so if something later goes wrong there, it is visible that a lens for it
+was on the table. It is not a workflow skip: `skips[]` records lightened workflow *steps*, keyed by
+step, and a lens is not one. Filing it there produces a change file the First Pass check rejects.
+
+Then start. Do not wait for permission a second time if they already accepted the offer at a step
+boundary.
 
 ---
 
 ## Step 3 — Write the briefs
 
-Spawn **two** reviewers with **different lenses**. Two reviewers with the same lens find the same
-things twice.
+Spawn one reviewer per lens the user agreed to, **never two on the same lens** — they find the
+same things twice.
 
-The default pair, which catch different classes and rarely overlap:
+The lens catalog, what each one asks, and when to add it are in `${CLAUDE_PLUGIN_ROOT}/shared/adversarial-review.md`.
+The short version: the base pair is `consequence` plus the one for the phase you just finished
+(`fitness` after design, `correctness` after code, `upgrade` at release), and conditional lenses
+are added for what the change actually touches.
 
-| Lens | Asks |
-|---|---|
-| **Correctness** | Does it do what it claims? What input breaks it? Is the fix complete, or does the same bug survive somewhere the diff did not touch? |
-| **Consequence** | What does this destroy, expose, or make unrecoverable? What happens to someone who already has the old version? |
+**Use the catalog's ids verbatim in the record.** The gate groups records by lens to catch two
+reviewers filed under one; a hand-invented name defeats it silently.
 
-Swap a lens when the work calls for it — `security` for auth and secrets, `migration` for anything
-that rewrites data in place, `compatibility` when the change lands in repos you do not control.
+**Do not give the reviewers names.** A named agent becomes an addressable peer rather than a task
+that returns: it does the work, and its report does not come back. Attribution comes from the file
+it writes, which is a stronger claim than the agent's identity anyway.
+
+**Every reviewer writes its report to a file as its final action.** That is the only channel that
+survives whichever way the harness chooses to hand work back, and it removes the temptation to read
+a transcript, which is a race you lose:
+
+```
+.hitl/reviews/incoming/<lens>-round<N>.md
+```
 
 Each brief must contain, in this order:
 
@@ -75,6 +113,9 @@ Each brief must contain, in this order:
    to confirm."*
 3. **What to attack, in priority order.** Be specific about the mechanisms, not about what you think
    is wrong with them.
+   **Include: check each file against itself before checking files against each other.** Two
+   contradictory claims twenty lines apart survive every cross-file comparison, because every other
+   document agrees with the stale half.
 4. **The reproduction rule.** *"Report only findings you reproduced, with the exact command and the
    observed output."* A finding nobody reproduced is a guess, and acting on guesses turns review
    into theatre.
@@ -82,8 +123,12 @@ Each brief must contain, in this order:
    findings."* A reviewer that must produce findings will.
 6. **A verdict instruction** — SHIP or DO NOT SHIP, and if the latter, the smallest change that
    would fix it.
-7. **Working rules** — scratch directories only, restore anything touched, never modify tracked
-   files.
+7. **Where the report goes.** *"Write your full report to `.hitl/reviews/incoming/<lens>-round<N>.md`
+   as your final action, then reply with that path and nothing else."* Say it last so it is the
+   instruction nearest the end of the brief.
+8. **Working rules** — scratch directories only, restore anything touched, never modify tracked
+   files. Writing its own report file is the one exception, and `.hitl/` is exempt from the gate's
+   uncommitted-changes check for exactly this reason.
 
 ### What must not be in a brief
 
@@ -94,16 +139,24 @@ Each brief must contain, in this order:
 - **Reassurance of any kind** — "this is well tested", "this was already reviewed". Both are
   invitations to look less hard.
 
-Give each reviewer a distinct name so the reports are attributable.
+Attribution comes from the report file each reviewer writes, not from the agent.
 
 ---
 
 ## Step 4 — Verify before you believe
 
-Reports come back. **Do not act on them yet.**
+**Read `.hitl/reviews/incoming/`.** Do not wait for reports to arrive on their own and do not read
+a reviewer's transcript — the last message is not flushed when the agent goes idle, so a transcript
+read returns a half-written report and looks like a reviewer that produced nothing.
 
-For each finding, reproduce it yourself. Reviewers are wrong sometimes — confidently. Relaying an
-unverified finding wastes everyone's time and teaches you to distrust the next real one.
+**A missing file means unknown, never failed.** If a lens has no report, say the lens did not
+complete and offer to re-run it. Never record a reviewer as having failed to synthesize anything:
+that is asserting a state you did not verify, the same move as marking a finding fixed without
+checking.
+
+Then, for each finding, **do not act on it yet** — reproduce it yourself. Reviewers are wrong
+sometimes, confidently. Relaying an unverified finding wastes everyone's time and teaches you to
+distrust the next real one.
 
 - **Reproduces** → it is real. Keep it, at the severity you measure, which may not be the severity
   claimed.
@@ -117,7 +170,52 @@ in the report.
 
 ---
 
-## Step 5 — Write the record
+## Step 5 — Put it to the user before you fix anything
+
+You have verified findings. **You do not yet know which of them this change should carry.** That is
+not your call: a finding can be real, reproducible, and still out of scope for the change in front
+of you. Scope belongs to the person who owns the change.
+
+Skipping this step is what makes a review feel like it happens in the dark — the user offered ten
+minutes of background work and got back a rewritten change hours later, having never seen what was
+found.
+
+**Put CRITICAL and HIGH to them individually. Summarise MEDIUM and LOW** — disposition those
+yourself and list them in the report. A twenty-five item ballot is not a decision, it is a signature
+mill, and a rubber-stamped `accepted_by` is worse than none because it looks like someone decided.
+
+Write each one in plain English:
+
+- **What breaks**, in a sentence, in their terms. Not the record's `claim` field, not YAML, no
+  unglossed jargon. If a reviewer wrote "the effect-tier guard misclassifies a tunnelled host",
+  you write "anyone with a port-forward open makes the deployed stack look local, so the check
+  that is supposed to stop destructive tests against production doesn't fire".
+- **What it costs if it ships**, concretely.
+- **Your recommendation**, and why. They are checking a judgement, not forming five from scratch.
+
+Then take one of three answers per finding:
+
+| Answer | What it means | What you write |
+|---|---|---|
+| **fix** | it belongs to this change | `status: fixed`, once the fix exists |
+| **accept** | real, and this change is not the place | `status: accepted` + `accepted_by:` their name |
+| **defer** | later, on the record | `status: accepted` + `accepted_by:`, and seed a fast-follow |
+
+`accepted_by` is the whole point of this step. The gate requires it and the template calls
+accepting risk "someone's decision" — so if nobody is asked, *fix everything* is the only answer
+you can reach, and that is what turns a review into a loop.
+
+**Do not block on it.** They accepted a review that runs in the background; do not convert it into
+a stop-the-world prompt. Put the list where they will see it, keep working on what is unambiguous
+(anything they already said to fix, anything MEDIUM or below), and pick the rest up when they
+answer.
+
+**A finding they have not answered is `open`.** Never accept on someone's behalf, and never write a
+name into `accepted_by` that did not say the words.
+
+---
+
+## Step 6 — Write the record
 
 Copy `${CLAUDE_PLUGIN_ROOT}/shared/templates/adversarial-review-record.yaml` to
 `.hitl/reviews/<change-id>-round<N>.yaml` and fill it in.
@@ -145,13 +243,31 @@ and a round-1-clean review reads differently from a round-3-clean one.
 
 ---
 
-## Step 6 — Resolve, then re-review if needed
+## Step 7 — Resolve, then re-review if needed
 
-Fix every `CRITICAL` and `HIGH`, or accept it explicitly with `accepted_by`.
+Apply the dispositions from Step 5. Every `CRITICAL` and `HIGH` ends as `fixed` or as `accepted`
+with a name against it — an unanswered one stays `open` and the gate blocks, which is correct.
 
-**Fixing changes the code, which makes the record stale.** That is intended. Run another round
-against the new sha. Keep going until a round comes back with nothing new — convergence is the
-signal, not a single clean pass.
+**Fixing changes the code, which makes the record stale.** That is intended: run another round
+against the new sha.
+
+**Two rounds, then ask.** Round 3 and beyond are a decision for the person who owns the change, not
+an automatic continuation. Say what round 2 found, what is still open, and what you would do next —
+then let them choose. Fifteen rounds of hardening is a fine thing to decide to do; it is not a fine
+thing to drift into.
+
+**A round against your own repairs is not a round against the design.** The first round reads work
+that someone reasoned their way into, and finds the assumption behind it. Later rounds mostly read
+fixes written minutes earlier, and find the ones that were correct about the defect they were shown
+and wrong about its class. Yield falls, cost does not. Say which kind of round you are proposing.
+
+**Two rounds in a row blocked by the same underlying decision is a scope question, not a fix
+question.** When the same acceptance criterion or design choice keeps producing findings, stop and
+put *that* to the user. Narrowing the change often dissolves the whole cluster, and it is cheapest
+before three rounds of repairs have been built on top of it.
+
+Convergence is a signal worth having, but it is not a plan. A loop with no stop condition but
+cleanliness will keep finding the last fix's mistakes.
 
 Check where you stand:
 
@@ -167,7 +283,7 @@ Exit 0 means the gate is satisfied for the current commit. Exit 2 prints what is
 
 ---
 
-## Step 7 — Report
+## Step 8 — Report
 
 Tell the user, in a few lines:
 
