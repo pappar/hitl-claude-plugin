@@ -42,7 +42,12 @@ def _strict_load(path):
 
 
 CRIT_ORDER = {"ceremony": 0, "standard": 1, "floor": 2}
-DISPOSITIONS = {"defer", "decline", "starter"}
+# `not_applicable` (#97): the RULES determined this step does not apply to this change. It is a
+# different fact from a person choosing to skip something, and without it a right-sized plan records
+# a named human as declining ~25 steps they never looked at — which the retrospective then reads
+# back as "what was left out and why". It still carries an actor and a reason, because one
+# confirmation records the lot and the confirming human owns the set.
+DISPOSITIONS = {"defer", "decline", "starter", "not_applicable"}
 # The ONLY valid step statuses. Anything else is a fail-open vector (a floor step hidden behind an
 # unknown status like "declined") — so an unrecognized status is a non-waivable BLOCK (round-1 CRIT-2).
 VALID_STATUSES = {"done", "current", "open", "skipped", "starter"}
@@ -63,12 +68,21 @@ NON_WAIVABLE = {"SILENT_SKIP", "FLOOR_NO_ACK", "FLOOR_NO_WAIVER", "NO_OMIT",
                 "UNKNOWN_STEP", "INVALID_STATUS", "INVALID_TIER", "MALFORMED", "CRIT_MONOTONIC",
                 # a load-bearing step DELETED from the plan (not skipped, no record) is a bypass (codex-1)
                 "INCOMPLETE_PLAN",
+                # `status: intake` claimed by a change that has a plan or skips — the stub exemption
+                # is not a way to un-certify planned work (#97)
+                "INTAKE_NOT_EMPTY",
+                # a provisional tier surviving past intake means nobody confirmed it (#97)
+                "TIER_PROVISIONAL",
+                # a change asserting an impact record that is not there (#97)
+                "IMPACT_RECORD",
                 # steps lightened while `first_pass` is absent: enforcement never engaged, so every other
                 # check below was skipped and the ledger is uncertified. The bug this catches shipped
                 # because the driver never emitted the flag.
                 "FP_UNDECLARED",
                 # an unmarked starter presented as complete is the "fabricated full artifact" ADR-6 forbids (codex-4)
-                "STARTER_MARK"}
+                "STARTER_MARK",
+                # a rule may not retire a load-bearing step. Only a human, by name, may (#97).
+                "RULE_OVER_FLOOR"}
 STARTER_MARKER = "needs-enhancement"
 
 
@@ -289,6 +303,85 @@ def check(change, catalog, tier=None, rollup=None, change_dir="."):
         if not _str(change.get("tier_reason")).strip():
             findings.append(_f("TIER_UNATTRIBUTED", f"tier {tier} is declared with no `tier_reason` — record why this change qualifies"))
 
+    # 0.4) INTAKE STUB (#97). Under right-sizing the plan does not exist until impact analysis has
+    #    run, so intake writes a stub carrying the change id, the agreed requirement and a
+    #    PROVISIONAL tier. Certifying a stub against the plan checks below would produce 9 blocking
+    #    INCOMPLETE_PLANs and 25 PLAN_PRUNED warnings for a change that has not been sized yet.
+    #
+    #    The exemption is deliberately narrow, because "no plan block" is exactly what a bypass
+    #    looks like. `status: intake` exempts ONLY a change that genuinely has nothing to certify:
+    #    no steps and no skips. Claiming intake while carrying either is itself a non-waivable
+    #    block, so the status cannot be used to un-certify a change that has already been planned.
+    if _str(change.get("status")) == "intake":
+        if steps or skips:
+            findings.append(_f("INTAKE_NOT_EMPTY",
+                               f"status is `intake` but the change carries {len(steps)} plan step(s) "
+                               f"and {len(skips)} skip record(s) — a stub has neither. Set the real "
+                               f"status; `intake` does not exempt a change that has been planned"))
+        else:
+            # A genuine stub: nothing to certify yet, and the tier is provisional by definition.
+            return findings
+    elif change.get("tier_provisional"):
+        # The provisional tier is the strictest one, so a stub fails closed if anything does resolve
+        # criticality against it. It must not survive into a planned change: step 4 replaces it with
+        # a human's declaration, and TIER_UNATTRIBUTED covers the attribution.
+        findings.append(_f("TIER_PROVISIONAL",
+                           "tier is still marked provisional on a change that has been planned — "
+                           "the tier is proposed from impact findings and confirmed by a human at "
+                           "step 4, and that confirmation has not happened"))
+
+    # 0.45) THE IMPACT RECORD (#97). The plan is derived from what the change reaches, and that
+    #    derivation is written to its own file. The design, the schema header and the generator's
+    #    own comment all said a missing or empty record BLOCKS — and none of them wrote the check,
+    #    which is this repo's recurring defect appearing in the middle of the fix for it.
+    #
+    #    Named-but-absent is non-waivable: the change file asserts a record that is not there, so
+    #    nothing can be said about how the plan was sized. Not named at all is waivable, because
+    #    every change file written before this feature is in that state and they are not wrong.
+    _rec = _str(change.get("impact_record")).strip()
+    if _rec:
+        # The pointer is REPO-ROOT relative (".hitl/impact/<id>.yaml") because that is where both
+        # skills write it and what the stub emits. `change_dir` is the directory CONTAINING the
+        # change file, i.e. `<repo>/.hitl`, so joining them looked for `<repo>/.hitl/.hitl/...` and
+        # every right-sized change died on a non-waivable block. The four unit tests passed
+        # `change_dir=<repo root>`, so they encoded the intended semantics and never exercised the
+        # path `run()` actually builds — the defect lived precisely in the gap between them.
+        _root = os.path.dirname(change_dir) if os.path.basename(change_dir) == ".hitl" else change_dir
+        _path = _rec if os.path.isabs(_rec) else os.path.join(_root, _rec)
+        if not os.path.isfile(_path):
+            findings.append(_f("IMPACT_RECORD", f"change names impact record '{_rec}' but it is not "
+                                                f"there — the plan cannot be shown to follow from anything"))
+        else:
+            try:
+                import yaml as _y                       # imported lazily, as everywhere else here
+                _body = _y.safe_load(open(_path)) or {}
+            except Exception:
+                # A record we cannot read is not a record we can vouch for. Fail closed, and say
+                # which failure it was rather than folding it into "empty".
+                findings.append(_f("IMPACT_RECORD", f"impact record '{_rec}' could not be read"))
+                _body = {"__unreadable__": True}
+            if not (isinstance(_body, dict) and (_body.get("findings") or _body.get("rule_outcomes"))):
+                findings.append(_f("IMPACT_RECORD", f"impact record '{_rec}' has no findings and no "
+                                                    f"rule outcomes — an empty record is the same as none"))
+            elif isinstance(_body, dict):
+                # The schema said a mismatch is a blocking error and nothing implemented it, so the
+                # sizing evidence could belong to a different change or a different catalog and
+                # certify clean. A plan justified by the wrong record is worse than one justified by
+                # none, because it looks accounted for.
+                _rid = _str(_body.get("change_id")).strip()
+                _cid = _str(change.get("change_id")).strip()
+                if _rid and _cid and _rid != _cid:
+                    findings.append(_f("IMPACT_RECORD", f"impact record is for '{_rid}' but this "
+                                                        f"change is '{_cid}'"))
+                _rwf = _str(_body.get("workflow")).strip()
+                _cwf = _str((change.get("workflow") or {}).get("id")).strip()
+                if _rwf and _cwf and _rwf != _cwf:
+                    findings.append(_f("IMPACT_RECORD", f"impact record was sized against workflow "
+                                                        f"'{_rwf}' but the plan is '{_cwf}'"))
+    # No `impact_record` at all is NOT reported. The design says a NAMED record that is missing or
+    # empty blocks; it does not say every change must name one. Requiring it would be a larger claim
+    # than the design makes and would fire on every change file written before this feature.
+
     # 0.5) PLAN COMPLETENESS (codex-1): a load-bearing step DELETED from the plan entirely leaves no status
     #    and no record to inspect — silently omitting it. Every catalog step that is `floor` (at this tier) or
     #    `no_omit` MUST be present in steps[]; a missing one is a non-waivable INCOMPLETE_PLAN. (Ceremony/
@@ -346,6 +439,17 @@ def check(change, catalog, tier=None, rollup=None, change_dir="."):
         # NO_OMIT (NEG-5): a no_omit step may be starter, never defer/decline
         if no_omit and disp in ("defer", "decline"):
             findings.append(_f("NO_OMIT", f"step '{key}' is no_omit (starter-only) — cannot be {disp}"))
+
+        # RULE_OVER_FLOOR (#97): `not_applicable` is the rules speaking, and the rules may not
+        # retire a load-bearing step. Without this the fourth disposition is a hole straight through
+        # the floor: any step could be dropped by asserting a rule excluded it, with no ack_by, no
+        # waiver, and nobody's judgement on the record. A floor step is dropped by a named human
+        # accepting the risk, or not at all.
+        if disp == "not_applicable" and (crit == "floor" or no_omit):
+            what = "no_omit" if no_omit else "floor"
+            findings.append(_f("RULE_OVER_FLOOR",
+                               f"step '{key}' is {what} and cannot be marked not_applicable — a rule "
+                               f"may not retire it. Use a risk-accepted skip with ack_by, or keep it"))
 
         # floor authority (NEG-3): floor skip needs ack_by
         if crit == "floor":
@@ -438,16 +542,34 @@ def run(change_path, workflows_path, rollup_path=None, tier=None):
         return [_f("MALFORMED", f"validation crashed on malformed input: {e.__class__.__name__}: {e}")]
 
 
-def _default_workflows():
-    """Locate the criticality catalog. In an onboarded product repo it is co-located with this validator
-    (`ci/first-pass/workflows.yaml`); in the source platform repo it is `ai/shared/workflows.yaml`. Try
-    both so the CLI needs no `--workflows` in either layout."""
+def default_workflows():
+    """Locate the criticality catalog, wherever this is running from.
+
+    THE ONE RESOLVER. There were three, in three tools, and only one matched the layout an onboarded
+    product repo actually has — so `gen_change.py` printed "workflows.yaml not found" and this file
+    silently loaded an empty catalog and reported every skip as UNKNOWN_STEP. A resolution strategy
+    per tool is a guarantee that at least one of them is wrong somewhere.
+
+    Four layouts, most specific first:
+      ci/first-pass/workflows.yaml          an onboarded product repo (init-project.sh puts it here)
+      $CLAUDE_PLUGIN_ROOT/shared/...        the installed plugin
+      <repo>/ai/shared/workflows.yaml       this source repo
+      ./ai/shared/workflows.yaml            a caller running from the source repo root
+    """
     here = os.path.dirname(os.path.abspath(__file__))
+    root = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
     for cand in (os.path.join(here, "workflows.yaml"),
-                 os.path.join(here, "..", "..", "ai", "shared", "workflows.yaml")):
-        if os.path.exists(cand):
-            return cand
+                 os.path.join(root, "shared", "workflows.yaml") if root else None,
+                 os.path.join(here, "..", "..", "ai", "shared", "workflows.yaml"),
+                 os.path.join(here, "..", "..", "..", "shared", "workflows.yaml"),
+                 "ai/shared/workflows.yaml"):
+        if cand and os.path.exists(cand):
+            return os.path.abspath(cand)
     return "ai/shared/workflows.yaml"
+
+
+# Kept as the old private name so nothing that imported it breaks.
+_default_workflows = default_workflows
 
 
 if __name__ == "__main__":

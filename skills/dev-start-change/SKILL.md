@@ -87,66 +87,141 @@ Wait for confirmation (or correction) before Step 4.
 
 ---
 
-## Step 3b — Confirm the tier (a human's call, always)
+## Step 3b — Restate what you understood, and write the stub
 
-Propose a tier from the issue and say why, then **wait for a human to confirm or correct it**. Do not
-seed a change without one. Tier decides which steps may be lightened at all, and nothing downstream
-re-checks the declaration against what the change actually touches.
+**Before anything is read or planned.** Write back what you understood, in a fixed shape:
 
-Where protection actually changes, from the catalog: **3 → 2** takes `impact`, `packet`,
-`arch_review`, `qa_verify` and `rollout` off `floor` in one move; **2 → 1** moves only
-`integration_verify`; `deploy` and `promote` never demote.
+| | |
+|---|---|
+| what you want | the ask, corrected |
+| in scope | what this change covers |
+| out of scope | what it explicitly does not, so it can be pointed at later |
+| definition of done | what counts as delivered, in the requester's terms |
 
-So **declaring 2 instead of 3 is the consequential call**, and it is the one the tooling does not
-guard: tier 2 is the generator's default and needs no attribution. Treat the 3 → 2 decision as the
-one to slow down on, whatever the paperwork asks for. Default up.
+Length comes from the change. A one-line fix has a one-line definition of done. Wait for a
+confirmation or a correction; this is the cheapest moment to catch a misread, because everything
+downstream derives from this text and a wrong plan is harder to argue with than a wrong sentence.
 
-Tiers are defined in [`/hitl:dev-practices`](../dev-practices/SKILL.md). At **tier 0 or 1** the change
-file must record `tier_set_by` and `tier_reason`, and the generator refuses without them. That
-attribution exists because tier 0/1 unlocks the batch-decline path in Step 4b, not because of floor
-demotion — be honest about which lock is on which door.
+**The definition of done is not the plan restated.** The plan is how the work gets done; this is
+what counts as delivered, in the requester's own words. A completed plan does not prove the thing
+does what was asked.
 
-> Default up. If a change could plausibly be tier 2 or tier 3, it is tier 3. The cost of extra process
-> is lower than the cost of an under-reviewed change, and a wrong tier is not caught later.
+**Flag a line you cannot check, do not block it.** "The system should be fast" cannot be shown to be
+met. Say so, offer a sharper version, take whatever answer comes back, and if the vague line stays,
+record that it was flagged as unverifiable and accepted anyway, with a name and a date. That record
+does not require you to have been right about the wording, only to have asked.
+
+Then write the stub:
+
+```bash
+GEN="ci/first-pass/gen_change.py"; [[ -f "$GEN" ]] || GEN="$ROOT/shared/ci/first-pass/gen_change.py"
+"$PY" "$GEN" --stub "$CHANGE_ID" "$BRANCH" "$HITL_VERSION" > .hitl/current-change.yaml
+```
+
+Fill in the `requirement` block with the confirmed text, `agreed_by` and `agreed_at`.
+
+The stub carries a **provisional tier of 3** and `status: intake`. It does not satisfy the
+active-change gate, so source edits stay blocked — correct, since no plan has authorised one yet.
+What it does is keep the agreed text if the session dies, feed the analysis, and name the record.
+
+**No tier question here.** The tier is proposed at Step 4 from what the analysis found. Asking now
+means asking before the evidence exists, which is what tiered a one-line shell script change up to a
+three and a half hour path (#97).
 
 ---
 
-## Step 4 — Show the step plan
+## Step 3c — Run the impact analysis
 
-Read the chosen workflow's steps from the bundled workflow catalog — `workflows.yaml`, resolved
-as `$CLAUDE_PLUGIN_ROOT/shared/workflows.yaml` in the installed plugin (or `ai/shared/workflows.yaml`
-when running from source) — and print the whole journey **by phase**, e.g.:
+Call `/hitl:dev-apply-change`. It reads the stub, works out what this change reaches, writes
+`.hitl/impact/<change_id>.yaml`, translates the definition of done into acceptance criteria, and
+returns. **It is not a step in the plan** — it is what produces the plan.
 
-```
-development workflow — 31 steps (+19a) across 7 phases:
-  Requirements  2   Issue → Figma
-  Design        7   Impact → Packet
-  Build         8   RED → Conv
-  Verify        6   Rvw1 → QAVfy
-  Assess        2   ImpBrf → Rollout
-  Ship          5   VfyPR → Promote
-  Post-Ship     2   30dROI → 90dROI
-```
-
-This still shows the whole journey up front — that principle holds, and the shape of the work is what a
-person actually needs to decide whether the workflow fits. A thirty-one item list is the moment a small
-change starts to feel like the wrong tool, and position is carried by the breadcrumb from here on anyway.
-
-**Print the full ordered list on request** ("show me every step"), and always print it in full for a
-workflow of 10 steps or fewer, where the phase summary would be longer than the list it replaces.
+Do not continue until the record exists and is non-empty. A change file naming a record that is not
+there is a blocking error, because a second artifact is only safe when something notices its absence.
 
 ---
 
-## Step 4b — Offer First Pass (optional, FR-29)
+## Step 4 — Propose the tier, then offer two options
 
-**First Pass** is the skip-with-record way to run this same plan: lighten what does not apply, on the
-record, and keep going. It is for anyone right-sizing a change — a developer on a one-line regression as
-much as a PM shipping a thin first version. It is opt-in; the default is the full plan.
+### The tier, from what the analysis found
 
-**At tier 0 or 1, offer the ceremony steps pre-selected as declined.** A bug fix does not need a Figma
-review, an ROI model, a training plan, or two ROI checkpoints, and making someone decline each one by
-hand is the friction that pushes people out of the process entirely. Present them ticked, with a
-one-line reason filled in ("tier 1: not required at this tier"), and let one confirmation record the lot.
+Propose one, say which finding drives it, and **wait for a human to confirm or correct it**. Record
+`tier_set_by` and `tier_reason`, and clear `tier_provisional`. Leaving it set is a blocking error:
+it means nobody confirmed.
+
+The evidence is in the record now, so the proposal cites it rather than the issue's wording. Three
+dependent areas and a data migration is a different change from one flagged file with no callers,
+and the words in the title do not distinguish them.
+
+Where protection actually changes, from the catalog: **3 → 2** takes `packet`, `arch_review`,
+`qa_verify` and `rollout` off `floor`; **2 → 1** moves only `integration_verify`. `deploy`,
+`promote`, the test-first cycle and the retrospective never demote. So **declaring 2 instead of 3 is
+the consequential call.**
+
+### Two options
+
+Size the plan from the record, passing the tier the human just confirmed. The sizer requires it
+and will not read one from the record: the impact analysis is not allowed to set a tier, and two
+sources for that field disagree.
+
+```bash
+SZ="ci/first-pass/size_plan.py"; [[ -f "$SZ" ]] || SZ="$ROOT/shared/ci/first-pass/size_plan.py"
+"$PY" "$SZ" ".hitl/impact/$CHANGE_ID.yaml" "$TIER" fast
+```
+
+**Write the outcomes back into the record.** `size_plan` returns `outcomes` — what each rule decided
+and why. Append it to `.hitl/impact/<change_id>.yaml` as `rule_outcomes`. Without it the record says
+what was found and never what was concluded from it, and the retrospective has nothing to compare
+against: you cannot ask whether a rule was right if nobody wrote down what it decided.
+
+It is written here, not by the analysis, because sizing needs the tier and the tier does not exist
+until this step.
+
+Show both, and the difference:
+
+```
+This change reaches: 3 areas, 1 published interface, a data migration.
+
+  Fast track   21 steps — what this change's own facts call for
+  Full scale   31 steps — everything that applies to a change of this shape
+
+  The 10 extra: Figma, ROI, training, design review, code review, refactor,
+  conventions, test review, and both ROI checkpoints.
+
+Recommended: fast track. Nothing it drops is protecting something this change touches.
+```
+
+One line on which is recommended and why. **The recommendation is advice** — taking full scale
+instead is not recorded.
+
+Say what each step protects when asked, from `protects` in the catalog. Order anything outside the
+fast track by `forgo_cost`, so the most consequential omission is the first one a person sees.
+
+**Print the full ordered list on request** ("show me every step"), and always in full for a workflow
+of 10 steps or fewer, where a phase summary would be longer than the list it replaces.
+
+---
+
+## Step 4b — Record the choice (First Pass, FR-29)
+
+**First Pass is how the choice at Step 4 is recorded.** It is not a separate offer and no longer
+opt-in: every change is shown a proposal and confirms or adjusts it. Full scale is simply the answer
+set where nothing is dropped. This is the third root cause in #97 — the one feature built for this
+problem had to be asked for by someone who already knew it existed.
+
+**The pre-selection comes from the rules, not from the tier.** `size_plan.py` has already decided
+what applies and what is needed now, from what this change reaches. Present the steps outside the
+chosen option pre-selected, each carrying the finding that decided it as its reason: "no interface
+files in this change", "3 dependents". Let **one confirmation record the lot.**
+
+Those entries take the `not_applicable` disposition — the rules determined the step does not apply,
+which is a different fact from a person choosing to skip it. Without that distinction a fast track
+records a named human declining twenty-odd steps they never looked at, and the retrospective reads
+that back as what was left out and why.
+
+A rule may never retire a load-bearing step. `not_applicable` on a `floor` or `no_omit` step is a
+non-waivable block (`RULE_OVER_FLOOR`); those are dropped by a named person accepting the risk, or
+not at all. `size_plan.py` never offers them, so a plan built from it cannot produce that record.
 
 Pre-selected is not pre-recorded. **Nothing is written until the human confirms**, and doing nothing
 still runs the full plan — `keep` remains the default disposition (CR-1). The actor on every resulting
@@ -154,6 +229,9 @@ record is the person who confirmed, never the agent.
 
 **Present the disposition menu ONCE** (brief mode — not a step-by-step interview). Each step's `crit`
 (from the catalog, resolved against this change's `tier`) constrains its options:
+
+Steps the RULES excluded are pre-selected as `not_applicable` and are not part of this menu; the
+menu is for what a person is choosing to lighten beyond that.
 
 | step type | options offered |
 |---|---|
@@ -250,164 +328,11 @@ CHOICES=".hitl/first-pass-choices.json"   # written by Step 4b; absent ⇒ full 
 
 # Write via a temp file: a generator that dies partway through `> file` leaves a truncated change
 # file behind, and a truncated change file reads as "no active change" to the gate.
-"$PY" - "$WF" "$CHANGE_ID" "$BRANCH" "$HITL_VERSION" "$TIER" "$CHOICES" "$TIER_SET_BY" "$TIER_REASON" << 'PY' > .hitl/current-change.yaml.tmp
-import sys, os, json, yaml
-from datetime import datetime, timezone
-wf_id, change_id, branch, ver, tier_s, choices_path = sys.argv[1:7]
-tier_set_by, tier_reason = (sys.argv[7:9] + ["", ""])[:2]
-try:
-    tier = int(tier_s)
-except ValueError:
-    sys.exit(f"tier must be an integer 0-4, got {tier_s!r}")
-if not 0 <= tier <= 4:
-    sys.exit(f"tier must be 0-4, got {tier}")
-if tier <= 1 and not (tier_set_by.strip() and tier_reason.strip()):
-    sys.exit("tier <= 1 needs TIER_SET_BY and TIER_REASON — a light path is a human's call, "
-             "and it unlocks the batch-decline path at intake.")
-
-# Catalog: prefer the plugin copy, fall back to the source path.
-for p in (os.path.join(os.environ.get("CLAUDE_PLUGIN_ROOT",""), "shared/workflows.yaml"),
-          "ai/shared/workflows.yaml"):
-    if os.path.isfile(p):
-        _all = yaml.safe_load(open(p))["workflows"]
-        if wf_id not in _all:
-            sys.exit(f"unknown workflow {wf_id!r}; the catalog defines: {sorted(_all)}")
-        cat = _all[wf_id]
-        break
-else:
-    sys.exit("workflows.yaml not found")
-
-# Criticality must be resolved the SAME way the validator resolves it, so import it rather than
-# reimplement it here — two copies of this rule is how a floor step quietly becomes skippable.
-resolve_crit = has_starter = is_allowed = None
-for d in (os.path.join(os.environ.get("CLAUDE_PLUGIN_ROOT",""), "shared/ci/first-pass"), "ci/first-pass"):
-    if os.path.isfile(os.path.join(d, "check_skips.py")):
-        sys.path.insert(0, d)
-        try:
-            from check_skips import resolve_crit; from starters import has_starter
-            from dispositions import is_allowed
-        except Exception:
-            resolve_crit = has_starter = is_allowed = None
-        break
-if resolve_crit is None or has_starter is None or is_allowed is None:
-    sys.exit("ci/first-pass not found — cannot resolve criticality or the starter registry. "
-             "Run /hitl:dev-update.")
-
-STATUS_FOR = {"defer": "skipped", "decline": "skipped", "starter": "starter"}
-
-# Validate the whole choices document before touching anything. A malformed file must produce a
-# clear refusal, not a traceback: the caller replaces the live change file with our stdout, so an
-# ambiguous failure is worse here than anywhere else in the pipeline.
-choices, actor = {}, ""
-if os.path.isfile(choices_path):
-    try:
-        doc = json.load(open(choices_path))
-    except ValueError as e:
-        sys.exit(f"{choices_path} is not valid JSON: {e}")
-    if not isinstance(doc, dict):
-        sys.exit(f"{choices_path} must be a JSON object with `actor` and `choices`.")
-    raw = doc.get("choices") or {}
-    if not isinstance(raw, dict):
-        sys.exit("`choices` must be an object keyed by step, e.g. {\"roi\": {\"disposition\": \"decline\", ...}}")
-    actor = doc.get("actor") or ""
-    if not isinstance(actor, str):
-        sys.exit("`actor` must be a string.")
-    known = {s["key"] for s in cat["steps"]}
-    for key, ch in raw.items():
-        if not isinstance(ch, dict):
-            sys.exit(f"choice for '{key}' must be an object, got {type(ch).__name__}.")
-        disp = ch.get("disposition")
-        if disp == "keep":
-            continue          # `keep` is the default and the menu offers it; it is simply not a record
-        if disp not in STATUS_FOR:
-            sys.exit(f"choice for '{key}' has disposition {disp!r}; expected one of "
-                     f"{sorted(STATUS_FOR)} (or 'keep' to leave the step alone).")
-        if not str(ch.get("reason") or "").strip():
-            sys.exit(f"choice for '{key}' needs a `reason` — a skip without one is a silent skip.")
-        if key not in known:
-            sys.exit(f"first-pass choices name steps not in the {wf_id} workflow: {key}")
-        # `starter` is only offered for steps with a registered honest-minimal artifact. The menu says
-        # so, but a menu is not an enforcement boundary — a hand-written choices file could otherwise
-        # invent a starter for any step and certify clean.
-        # Registry check first — `is_allowed` subsumes it but cannot say what to do instead.
-        if ch["disposition"] == "starter" and not has_starter(key):
-            sys.exit(f"'{key}' has no registered starter (ci/first-pass/starters.py); use defer or decline.")
-        if not is_allowed({s["key"]: s for s in cat["steps"]}[key], tier, ch["disposition"]):
-            sys.exit(f"'{ch['disposition']}' is not allowed for '{key}' at tier {tier} (see the Step 4b "
-                     f"menu; a no_omit step may only be thinned to a starter).")
-        choices[key] = ch
-    if choices and not actor.strip():
-        sys.exit("first-pass choices need an `actor` — a skip is accountable to a person, not the agent.")
-ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
-q = lambda v: json.dumps("" if v is None else str(v))   # JSON strings are valid YAML double-quoted scalars
-
-steps = cat["steps"]
-# `current` must never land on a lightened step (schema: the pointer never points at skipped/starter).
-# If every step was lightened there is no honest pointer and no change left to run, so refuse rather
-# than emit a file that contradicts its own schema.
-first = next((s for s in steps if s["key"] not in choices), None)
-if first is None:
-    sys.exit("every step in the plan was lightened — there is no change left to run. Keep at least one.")
-# Every interpolated scalar goes through q(). A branch name or change id containing a quote used to
-# produce a file that was non-empty and exited 0 but did not parse — and the shell guard checks status
-# and emptiness, not validity, so it installed the broken file over the live one.
-lines = [
-    'schema_version: "2.0"',
-    f'hitl_version: {q(ver)}',
-    '',
-    f'change_id: {q(change_id)}',
-    f'tier: {tier}',
-]
-if tier <= 1:
-    lines += [f'tier_set_by: {q(tier_set_by)}', f'tier_reason: {q(tier_reason)}']
-lines += [
-    'status: planning',
-    f'expected_branch: {q(branch)}',
-]
-if choices:
-    lines += ['', 'first_pass: true   # dispositions were chosen at intake; the ledger below is enforced']
-lines += [
-    '',
-    'workflow:',
-    f'  id: {q(cat["id"])}',
-    f'  version: {q(ver)}',
-    f'  total: {cat["total"]}',
-    '  steps:',
-]
-for s in steps:
-    ch = choices.get(s["key"])
-    st = STATUS_FOR[ch["disposition"]] if ch else ("current" if s is first else "open")
-    lines.append(f'    - {{ n: {q(s["n"])}, key: {q(s["key"])}, label: {q(s["label"])}, '
-                 f'phase: {q(s["phase"])}, status: {st} }}')
-
-if choices:
-    lines += ['', 'skips:']
-    by_key = {s["key"]: s for s in steps}
-    for key, ch in choices.items():
-        crit = resolve_crit(by_key[key], tier)
-        entry = (f'  - {{ step: {key}, crit: {crit}, actor: {q(actor)}, reason: {q(ch.get("reason"))}, '
-                 f'ts: "{ts}", disposition: {ch["disposition"]}, resolved: false')
-        for opt in ("followup_ref", "ack_by", "waiver_ref", "starter_artifact"):
-            if ch.get(opt):
-                entry += f', {opt}: {q(ch[opt])}'
-        lines.append(entry + ' }')
-
-lines += [
-    '',
-    'current_step:',
-    f'  number: {first["n"] if str(first["n"]).isdigit() else str(first["n"])[:-1]}',
-    f'  name: {q(first["label"])}',
-    f'  phase: {q(first["phase"])}',
-]
-out = "\n".join(lines)
-# Refuse to hand the wrapper something it cannot parse. The guard downstream checks exit status and
-# non-emptiness; only this check can catch a file that is both and still invalid.
-try:
-    yaml.safe_load(out)
-except yaml.YAMLError as e:
-    sys.exit(f"generated change file is not valid YAML ({e.__class__.__name__}) — refusing to emit it.")
-print(out)
-PY
+# The generator lives at ci/first-pass/gen_change.py — resolved the same way as the validators,
+# so it works from source and from the installed plugin.
+GEN="ci/first-pass/gen_change.py"; [[ -f "$GEN" ]] || GEN="$ROOT/shared/ci/first-pass/gen_change.py"
+"$PY" "$GEN" "$WF" "$CHANGE_ID" "$BRANCH" "$HITL_VERSION" "$TIER" "$CHOICES" \
+     "$TIER_SET_BY" "$TIER_REASON" > .hitl/current-change.yaml.tmp
 rc=$?
 
 # Replace the live file ONLY on success. The generator refuses on several paths (tier attribution,
