@@ -549,5 +549,29 @@ if [[ -n "$stray" ]]; then
 fi
 echo "Packaging check: no test/conftest/bytecode under shared/"
 
+# ── Reachability: every shared/ path a shipped skill names must actually be in the package ────
+# build.sh allowlists tool directories by name, so a new tool ships nothing until someone adds a
+# block — and nothing reported the omission. 2.9.0 shipped skills/dev-retro/SKILL.md with its
+# generator missing; the command would have exited 1 on a floor step that runs on every change.
+# A skill naming a file the package does not contain is a broken command, so this fails the build.
+echo "Reachability check: shared/ paths named by shipped skills"
+missing=0
+while read -r ref; do
+  [[ -n "$ref" ]] || continue
+  if [[ ! -e "$PLUGIN_DIR/$ref" ]]; then
+    echo "  MISSING  $ref" >&2
+    missing=$((missing + 1))
+  fi
+done < <(grep -rhoE 'shared/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+' \
+           "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" 2>/dev/null \
+         | sed 's/[.,;:)]*$//' | sort -u || true)
+if (( missing > 0 )); then
+  echo "" >&2
+  echo "Refusing to build: $missing shared/ path(s) named by a shipped skill are not in the" >&2
+  echo "package. Either ship the file (see the tools/ blocks above) or fix the reference." >&2
+  exit 2
+fi
+echo "  all shared/ references resolve"
+
 echo "Build complete."
 echo "Review changes with: git -C \"$PLUGIN_DIR\" diff --stat"
