@@ -337,6 +337,17 @@ if [[ -d "$SOURCE_DIR/tools/hitl-onboarding" ]]; then
     echo "  shared/tools/hitl-onboarding/$fname"
   done
 fi
+# The closing retrospective's generator (#98). The skill resolves it at
+# shared/tools/retro/retro_records.py, so a build that omits it ships a floor step whose command
+# exits 1 on every change.
+if [[ -d "$SOURCE_DIR/tools/retro" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/tools/retro"
+  find "$SOURCE_DIR/tools/retro" -maxdepth 1 -name "*.py" ! -name "test_*" ! -name "conftest.py" | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/tools/retro/$fname"
+    echo "  shared/tools/retro/$fname"
+  done
+fi
 if [[ -d "$SOURCE_DIR/ci/agentic-advisor" ]]; then
   mkdir -p "$PLUGIN_DIR/shared/ci/agentic-advisor"
   find "$SOURCE_DIR/ci/agentic-advisor" -maxdepth 1 -name "*.py" ! -name "test_*" ! -name "conftest.py" | while read -r src; do
