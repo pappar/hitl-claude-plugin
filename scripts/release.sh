@@ -57,6 +57,23 @@ else
     echo "Refusing to publish: the release gate did not pass." >&2
     exit 2
   }
+
+  # The waiver path above accepts a skip record that the LEDGER validator rejects. Both are
+  # fail-closed, both read the same file, and 2.9.0 and 2.9.1 shipped while they disagreed —
+  # check_review said ship, check_skips said the record was malformed (no disposition, no
+  # waiver_ref), and the release path only ever asked the first. A gate that publishes on a
+  # record its own validator refuses is not a gate. Ask both.
+  LEDGER="$SOURCE_DIR/ci/first-pass/check_skips.py"
+  if [[ -f "$LEDGER" ]]; then
+    python3 "$LEDGER" "$CHANGE" || {
+      echo "" >&2
+      echo "Refusing to publish: the skip ledger did not certify." >&2
+      echo "  The release gate accepted this change, but its skip records are not valid." >&2
+      exit 2
+    }
+  else
+    echo "  WARNING: $LEDGER not found — skip records are UNCERTIFIED for this release." >&2
+  fi
 fi
 echo ""
 
