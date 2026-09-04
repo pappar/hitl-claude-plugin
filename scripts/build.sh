@@ -531,9 +531,8 @@ else
   echo "  Tip:  set CLAUDE_BIN=/path/to/claude to specify the binary explicitly"
 fi
 
-# NOTE: marketplace.json source.commit is NOT updated here.
-# Updating it before the build commit exists would pin to the previous HEAD.
-# Run scripts/release.sh after committing to update the pin and create the tag.
+# NOTE: this only builds. scripts/release.sh runs the release gate, commits the build and tags it;
+# pushing the release branch is what publishes (the marketplace serves the branch head).
 
 echo ""
 # ── Post-build assertion ──────────────────────────────────────────────────────

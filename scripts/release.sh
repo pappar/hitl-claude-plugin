@@ -7,13 +7,11 @@
 # What it does (in order):
 #   1. Runs build.sh to sync all content from hitl-dev-platform
 #   2. Commits the built output as "chore(release): build vX.Y.Z"
-#   3. Updates .claude-plugin/marketplace.json source.commit to the build commit SHA
-#   4. Creates the Claude-convention plugin tag: hitl--vX.Y.Z
-#   5. Commits marketplace.json with the correct SHA
+#   3. Creates the Claude-convention plugin tag: hitl--vX.Y.Z on that commit
 #
-# The two-step commit is intentional: the build commit SHA can only be known
-# after the build commit exists. Updating marketplace.json in the same commit
-# would create a pointer to the commit before it — which installs the wrong version.
+# There is no marketplace pin. `claude plugin install` ignores a `source.commit` field and serves
+# the head of the branch named in `source.ref`, so the channel IS the branch (hitl = release/2.x).
+# Pushing this branch is the act of publishing; the tag records which commit that was.
 
 set -euo pipefail
 
@@ -99,23 +97,7 @@ fi
 BUILD_SHA=$(git -C "$PLUGIN_DIR" rev-parse HEAD)
 echo "  Build commit: $BUILD_SHA"
 
-# ── Step 4: Update marketplace.json with the build commit SHA ─────────────────
-echo "Updating marketplace.json source.commit → ${BUILD_SHA:0:12}..."
-MARKETPLACE_JSON="$PLUGIN_DIR/.claude-plugin/marketplace.json"
-python3 - "$MARKETPLACE_JSON" "$BUILD_SHA" <<'PYEOF'
-import json, sys
-path, sha = sys.argv[1], sys.argv[2]
-with open(path) as f:
-    data = json.load(f)
-for plugin in data.get("plugins", []):
-    if "source" in plugin:
-        plugin["source"]["commit"] = sha
-with open(path, "w") as f:
-    json.dump(data, f, indent=2)
-    f.write("\n")
-PYEOF
-
-# ── Step 5: Create plugin tag (Claude convention: {name}--v{version}) ─────────
+# ── Step 4: Create plugin tag (Claude convention: {name}--v{version}) ─────────
 TAG="hitl--v${VERSION}"
 echo "Creating tag: $TAG"
 if git -C "$PLUGIN_DIR" tag --list | grep -qxF "$TAG"; then
@@ -125,13 +107,8 @@ else
   echo "  Tagged $BUILD_SHA as $TAG"
 fi
 
-# ── Step 6: Commit marketplace.json ───────────────────────────────────────────
-echo "Committing marketplace.json..."
-git -C "$PLUGIN_DIR" add .claude-plugin/marketplace.json
-git -C "$PLUGIN_DIR" commit -m "chore(release): pin marketplace to v${VERSION} build commit"
-
 echo ""
 echo "Release v${VERSION} complete."
 echo "  Build commit : $BUILD_SHA"
 echo "  Tag          : $TAG"
-echo "  To push      : git -C \"$PLUGIN_DIR\" push && git -C \"$PLUGIN_DIR\" push origin $TAG"
+echo "  To publish   : git -C \"$PLUGIN_DIR\" push origin $(git -C "$PLUGIN_DIR" rev-parse --abbrev-ref HEAD) && git -C \"$PLUGIN_DIR\" push origin $TAG"
