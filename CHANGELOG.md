@@ -4,6 +4,36 @@ All notable changes to the HITL plugin are documented here.
 
 ---
 
+## [2.10.0] — 2026-09-04
+
+### Fixed
+
+- **Security design review, CVE audit and pentest can now appear in a plan** (#102). The catalog
+  dropped every `cond:` step on the way to the runtime, so a tier-3 change to authentication drew
+  none of them, and `pentest` was floor while unreachable. They are lettered substeps now (4a-4c,
+  27a), activated per change: a lockfile change, an interface change, a migration, or the human
+  answering yes to one intake question — does this touch auth, secrets, personal or payment data.
+  Inactive, the sizer records them `not_applicable` with the reason. The gate takes that from the
+  impact record, not the ledger: `COND_UNCONFIRMED` (non-waivable) blocks a conditional step marked
+  not_applicable when the record shows its activator fired, has no outcome for it, or never answers
+  the security question — silence is not a no.
+- **The change-file audit in `dev-update` fails closed** (#103). An unreadable change file was
+  coerced to `{}` and certified consistent; now no PyYAML, invalid YAML and a non-mapping each
+  report "audit did NOT run" and exit 1.
+- **Validator copies are co-owned, so the sync never blind-copies** (#104). `migrate_project.py
+  --sync-validators` installs what is absent, stays silent on identical files, shows a diff and asks
+  on a modified one, leaves repo-added files alone, and honours a per-directory `.hitl-optout`.
+- **`dev-retro`'s description read as an XML tag** and failed the skill lint on `main`.
+- **The step docs number the steps the way the runtime does.** After #97 moved impact analysis
+  out of the plan and put the retrospective in, `workflow-steps.md` and the summary list in
+  `dev-practices` kept their old numbers: every name from step 3 to 29 was one step off, the
+  breadcrumb's full names were wrong for most steps, the retrospective and the two adversarial
+  substeps had no entry, and the architect code review was "19a" everywhere it was mentioned (it
+  is 18a). The breadcrumb matrix, the example change file and the session-summary hook follow.
+  Two wiring tests now hold the three copies to the runtime.
+
+---
+
 ## [2.9.1] — 2026-09-02
 
 `/hitl:dev-retro` did not run for anyone who installed the plugin. 2.9.0 shipped it with
@@ -64,11 +94,14 @@ against 31.
 
 **This is not a new mechanism.** It replaces the pre-selection logic inside First Pass Step 4b,
 which already presented steps with reasons filled in, took one confirmation for the whole set, and
-put the confirming person's name on every record. The ledger, the validator and the actor rule are
-unchanged.
+put the confirming person's name on every record. The actor rule is unchanged. The ledger and the
+validator are not: the ledger gains a fourth disposition and the validator four non-waivable codes,
+both described below.
 
 **First Pass is no longer opt-in.** Every change is shown a proposal; full scale is the answer set
-where nothing is dropped. The one feature built for this problem used to require knowing it existed.
+where nothing is *declined*. The rules still exclude steps that do not apply, which is why the
+full-scale counts above are 23 and 31 against a 34-step catalog, not 34 both times. The one feature
+built for this problem used to require knowing it existed.
 
 **A fourth disposition, `not_applicable`.** The rules excluding a step is a different fact from a
 person declining it. Without the distinction, a fast track recorded a named human as declining
@@ -82,10 +115,11 @@ are dropped by a named person accepting the risk, or not at all.
 HITL ▸ GH-97 ▸ Build ▸ RED [T2]  → /hitl:dev-tdd
 ```
 
-The catalog has declared a command for every step all along. It was dropped in derivation, dropped
-again when the change file was written, and never shown. Each hop passed its own checks while the
-path was dead end to end. Steps with nothing to run say so rather than inventing a command. Every
-step also closes by saying what comes next and how to start it.
+The catalog has declared commands all along for the three workflows that have them — `development`
+(34 steps), `platform` (17) and `release` (12). They were dropped in derivation, dropped again when
+the change file was written, and never shown. Each hop passed its own checks while the path was dead
+end to end. The other five workflows declare no commands at all, and steps with nothing to run say
+so rather than inventing one. Every step also closes by saying what comes next and how to start it.
 
 ### Fixed
 
@@ -101,8 +135,9 @@ step also closes by saying what comes next and how to start it.
 ### Known limits
 
 - The two-option choice applies to `development` only. Platform is a one-time readiness checklist
-  with its own waiver machinery and no per-step criticality; the other six workflows have no sizing
-  rules and say so rather than offering two identical lists.
+  with its own waiver machinery and no per-step criticality; the other six have too few sizing rules
+  for the two options to differ — `brownfield` has one and `docs` two, the rest none — so they return
+  a single plan with a partial-coverage warning rather than offering two identical lists.
 - The sizing rules will be wrong at first. The closing retrospective is what corrects them.
 
 ## [2.8.0] — 2026-08-18
