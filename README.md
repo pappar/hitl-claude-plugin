@@ -162,26 +162,23 @@ Once installed, open Claude Code in your project and run the command that matche
 
 Skills, commands, agents, and templates are authored in the source repo:
 
-**[github.com/Prasad-Apparaju/hitl-dev-platform](https://github.com/Prasad-Apparaju/hitl-dev-platform)** — edit files under `ai/claude/` there.
+**[github.com/Prasad-Apparaju/hitl-dev-platform](https://github.com/Prasad-Apparaju/hitl-dev-platform)** — edit files under `ai/claude/` there. Nothing in this repo is edited by hand.
 
-After updating the source, rebuild this plugin:
+To see your source changes in a local plugin build:
 
 ```bash
 # Clone both repos as siblings
 git clone https://github.com/Prasad-Apparaju/hitl-dev-platform
 git clone https://github.com/pappar/hitl-claude-plugin
 
-# Rebuild
 cd hitl-claude-plugin
-./scripts/build.sh
+./scripts/build.sh            # copies and renames the source into the plugin layout
 # If 'claude' on your PATH is a broken wrapper, override the binary:
 # CLAUDE_BIN=/path/to/claude ./scripts/build.sh
-
-# Review, commit, push
 git diff --stat
-git add -A && git commit -m "chore: rebuild from hitl-dev-platform"
-git push
 ```
+
+Releases are cut by maintainers with `./scripts/release.sh` on the `release/2.x` branch. It refuses to build unless the source repo has an active change on HITL's `release` workflow that passes both the adversarial-review gate and the skip-ledger validator; then it commits the build, pins `marketplace.json`, and tags `hitl--vX.Y.Z`. The full runbook is [`docs/releasing.md`](https://github.com/Prasad-Apparaju/hitl-dev-platform/blob/main/docs/releasing.md) in the source repo. Pushing a rebuild straight to `main` publishes nothing: the `hitl` channel serves `release/2.x`.
 
 The same source can be used to build plugins for other AI platforms (e.g. Codex) by following the same build pattern with a platform-specific manifest and hooks.
 
