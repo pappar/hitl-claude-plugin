@@ -33,18 +33,20 @@ if [[ "$(hitl_branch_reconcile "$HITL_FILE" "$CURRENT_BRANCH")" == "mismatch" ]]
   change_id=$(hitl_scalar "$HITL_FILE" change_id)
   cat <<DIRECTIVE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  ⚠️  HITL — BRANCH ↔ CHANGE MISMATCH
+  ⚠️  HITL: BRANCH AND CHANGE DO NOT MATCH
 
   Git branch        : ${CURRENT_BRANCH}
   Active change     : ${change_id}  (.hitl/current-change.yaml)
 
-  This branch is operating under a change that doesn't match it — the change
+  This branch is operating under a change that doesn't match it. The change
   file was likely inherited from another branch. Source edits are blocked until
   this is realigned. Do NOT trust prior analysis in context.
 
   Resolve before doing any work:
     • /hitl:dev-switch-context     reload context for this branch's issue
     • /hitl:dev-start-change       select the correct change for this branch
+
+  Plain English, short: shared/plain-english.md applies to every reply and document.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DIRECTIVE
   exit 0

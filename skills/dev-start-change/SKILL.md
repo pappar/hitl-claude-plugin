@@ -278,7 +278,7 @@ If the validator is missing, say so **before** collecting any choices — the le
 ROOT="${CLAUDE_PLUGIN_ROOT:-$(python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')));[print(i['installPath']) for i in d.get('plugins',{}).get('hitl@hitl',[]) if os.path.isfile(os.path.join(i.get('installPath',''),'.claude-plugin/plugin.json'))]" 2>/dev/null | head -1)}"
 CHK="ci/first-pass/check_skips.py"
 [[ -f "$CHK" ]] || CHK="$ROOT/shared/ci/first-pass/check_skips.py"
-[[ -f "$CHK" ]] || echo "⚠ First Pass validator not found — run /hitl:dev-update to install it. Do NOT record skips until it is present: the ledger is unenforced without it."
+[[ -f "$CHK" ]] || echo "⚠ First Pass validator not found: run /hitl:dev-update to install it. Do NOT record skips until it is present: the ledger is unenforced without it."
 ```
 
 Certification happens in **Step 6b**, once the change file exists and there is something real to certify.
@@ -360,7 +360,7 @@ Show the resulting file to the user. Then complete the remaining required fields
 `${CLAUDE_PLUGIN_ROOT}/shared/templates/change-context.schema.yaml`, or note they will be filled by the
 workflow's own steps.
 
-> **The roll-up is written at Step 6b, below**, not here — the change file has to exist first. Entries
+> **The roll-up is written at Step 6b, below**, not here: the change file has to exist first. Entries
 > recorded before the workflow declares its area are marked project-wide; the `development` route
 > narrows them at its impact step.
 
