@@ -423,7 +423,7 @@ if [[ -f "$SOURCE_DIR/ci/workflows/first-pass-check.yml" ]]; then
 fi
 
 # ── Shared prose ──────────────────────────────────────────────────────────────
-SHARED_PROSE=(challenge-stance.md verification-review.md skip-record.md personas.md)
+SHARED_PROSE=(challenge-stance.md verification-review.md skip-record.md personas.md plain-english.md)
 echo "Syncing shared prose..."
 for prose in "${SHARED_PROSE[@]}"; do
   if [[ -f "$SOURCE_DIR/ai/shared/$prose" ]]; then
