@@ -266,6 +266,18 @@ for src_dir in \
   fi
 done
 
+# A template the source deleted must not ride forward in the package. 2.11.0's build carried
+# adversarial-review-record.yaml beside its replacement until a review caught it: the copy loop
+# only ever added. Anything here that neither source directory has any more goes.
+for existing in "$PLUGIN_DIR"/shared/templates/*; do
+  [[ -f "$existing" ]] || continue
+  fname="$(basename "$existing")"
+  if [[ ! -f "$SOURCE_DIR/ai/shared/templates/$fname" && ! -f "$SOURCE_DIR/ai/claude/generate-docs/templates/$fname" ]]; then
+    rm -f "$existing"
+    echo "  removed stale shared/templates/$fname"
+  fi
+done
+
 # ── Shared CI tooling ─────────────────────────────────────────────────────────
 # Python tooling that product repos copy in during onboarding and reference by
 # repo path from the copied ci/workflows/*.yml templates. Shipped as assets under
@@ -417,6 +429,20 @@ for prose in "${SHARED_PROSE[@]}"; do
   if [[ -f "$SOURCE_DIR/ai/shared/$prose" ]]; then
     cp "$SOURCE_DIR/ai/shared/$prose" "$PLUGIN_DIR/shared/$prose"
     echo "  shared/$prose"
+  fi
+done
+# Prose that left the allowlist must leave the package too. Top-level shared/*.md is either in
+# SHARED_PROSE or one of the workflow docs synced below; anything else is a leftover from a rename
+# (2.11.0: adversarial-review.md rode along beside verification-review.md).
+SHARED_DOCS=(getting-started.md command-map.md usage-guide.md workflow-prd.md workflow-brownfield.md workflow-migration.md)
+for existing in "$PLUGIN_DIR"/shared/*.md; do
+  [[ -f "$existing" ]] || continue
+  fname="$(basename "$existing")"
+  keep=0
+  for k in "${SHARED_PROSE[@]}" "${SHARED_DOCS[@]}"; do [[ "$fname" == "$k" ]] && keep=1; done
+  if [[ $keep -eq 0 ]]; then
+    rm -f "$existing"
+    echo "  removed stale shared/$fname"
   fi
 done
 if [[ -f "$SOURCE_DIR/CHANGELOG.md" ]]; then
