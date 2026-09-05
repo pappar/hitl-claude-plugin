@@ -411,7 +411,7 @@ if [[ -f "$SOURCE_DIR/ci/workflows/first-pass-check.yml" ]]; then
 fi
 
 # ── Shared prose ──────────────────────────────────────────────────────────────
-SHARED_PROSE=(challenge-stance.md adversarial-review.md skip-record.md personas.md)
+SHARED_PROSE=(challenge-stance.md verification-review.md skip-record.md personas.md)
 echo "Syncing shared prose..."
 for prose in "${SHARED_PROSE[@]}"; do
   if [[ -f "$SOURCE_DIR/ai/shared/$prose" ]]; then
@@ -480,7 +480,7 @@ find "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" \
     -e 's|skills/dev-apply-change/|${CLAUDE_PLUGIN_ROOT}/skills/dev-apply-change/|g' \
     "$f"
   # Every top-level shared prose file, flattened then prefixed. A hardcoded per-file list is how
-  # adversarial-review.md shipped with a bare path that resolved against the user's project.
+  # (then adversarial-)review.md shipped with a bare path that resolved against the user's project.
   for prose in "${SHARED_PROSE[@]}"; do
     sed -i '' \
       -e "s|ai/shared/${prose}|shared/${prose}|g" \
