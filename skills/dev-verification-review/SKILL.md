@@ -118,12 +118,12 @@ Each brief must contain, in this order:
    is still exploring after the checklist is done is producing volume, not verification.
 6. **A verdict instruction** — VERIFIED or NOT VERIFIED, and if the latter, the one check that
    decides it.
-7. **Where the report goes.** *"Write your full report to `.hitl/reviews/incoming/<lens>-round<N>.md`
-   as your final action, then reply with that path and nothing else."* Say it last so it is the
-   instruction nearest the end of the brief.
-8. **Working rules** — scratch directories only, restore anything touched, never modify tracked
+7. **Working rules** — scratch directories only, restore anything touched, never modify tracked
    files. Writing its own report file is the one exception, and `.hitl/` is exempt from the gate's
    uncommitted-changes check for exactly this reason.
+8. **Where the report goes.** *"Write your full report to `.hitl/reviews/incoming/<lens>-round<N>.md`
+   as your final action, then reply with that path and nothing else."* Say it last so it is the
+   instruction nearest the end of the brief.
 
 ### What must not be in a brief
 
@@ -254,7 +254,22 @@ Check where you stand:
 # CLAUDE_PLUGIN_ROOT is unset in the Bash tool; a bare "$CLAUDE_PLUGIN_ROOT/..." becomes "/...".
 ROOT="${CLAUDE_PLUGIN_ROOT:-$(python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')));[print(i['installPath']) for i in d.get('plugins',{}).get('hitl@hitl',[]) if os.path.isfile(os.path.join(i.get('installPath',''),'.claude-plugin/plugin.json'))]" 2>/dev/null | head -1)}"
 GATE="ci/adversarial/check_review.py"
-[[ -f "$GATE" ]] || GATE="$ROOT/shared/ci/adversarial/check_review.py"
+SHIPPED="$ROOT/shared/ci/adversarial/check_review.py"
+if [[ -f "$GATE" && -f "$SHIPPED" ]] && ! cmp -s "$GATE" "$SHIPPED"; then
+  # The repo's copy is the one that binds at publish time, and it may predate this record shape
+  # (plugin #35: a 2.10 gate kept under a 2.12 plugin rejected every record as malformed). If it is
+  # an unmodified older release, say so and run the shipped copy so this reading is true; the repo
+  # copy is refreshed by /hitl:dev-update Step 4.6, which must happen before the release script runs.
+  h=$( (shasum -a 256 "$GATE" 2>/dev/null || sha256sum "$GATE") | awk '{print $1}')
+  if grep -qi "^$h  ci/adversarial/check_review.py" "$ROOT/shared/ci/shipped-validators.sha256" 2>/dev/null; then
+    echo "Your repo's copy of the gate is an older HITL release, not an edit. Reading with the shipped copy."
+    echo "Run /hitl:dev-update to refresh ci/adversarial/check_review.py before publishing; the repo copy is what binds."
+    GATE="$SHIPPED"
+  else
+    echo "Note: ci/adversarial/check_review.py differs from the shipped copy and is not an older release, so it is yours. Using it."
+  fi
+fi
+[[ -f "$GATE" ]] || GATE="$SHIPPED"
 python3 "$GATE"
 ```
 
@@ -289,7 +304,7 @@ review happened at any point in this change.
 
 ## Closing this step
 
-When this step is done, close it the way `ai/shared/next-step.md` describes: what finished, what is
+When this step is done, close it the way `${CLAUDE_PLUGIN_ROOT}/shared/next-step.md` describes: what finished, what is
 next in words that say what it achieves, and how to start it. Read the next step and its `command`
 from `.hitl/current-change.yaml`; `manual` and `guided` are not commands and must not be rendered as
 one. Do not list the remaining steps, restate what just happened, or ask permission to continue.

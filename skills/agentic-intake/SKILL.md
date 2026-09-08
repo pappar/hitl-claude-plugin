@@ -29,7 +29,7 @@ Surface selection already happened in `pm-design-feature` (the `agentic` gate �
 are only reached on the compound branch. Elicit the **full** component/edge detail; do not re-decide the surface.
 
 ## Procedure
-1. **Elicit** the scenario by walking `ai/shared/agentic/catalog.yaml` adaptively: for each entry whose
+1. **Elicit** the scenario by walking `shared/agentic/catalog.yaml` adaptively: for each entry whose
    `ask_when` predicate holds against the scenario-so-far — evaluated by the small **safe** evaluator
    `askwhen.evaluate(entry.ask_when, state)` (grammar only, no arbitrary code, §2.2) — ask its `question`,
    interpret the answer into an `option` (or capture free-text), and apply the entry's `consequence`. Ask in plain language; you supply the

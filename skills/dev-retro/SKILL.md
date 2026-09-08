@@ -72,7 +72,7 @@ requirement and the issue.
 **You may not** infer a reason that was never recorded, soften one that was, or describe work no
 record mentions. Where a record is silent, the retrospective is silent.
 
-The voice is the one already defined in `ai/shared/first-pass/language.md` and linted by
+The voice is the one already defined in `shared/first-pass/language.md` and linted by
 `ci/first-pass/resurface.py`: describe state and movement, never who did or did not do something.
 
 > The rollout step was left out; the change is config only.
@@ -113,6 +113,8 @@ goes through the normal flow like any other. If the retrospective makes a rule l
 issue; do not edit `workflows.yaml` from here.
 
 ## Step 6 — Fold the open items forward
+
+Re-read every open follow-up issue this change's reviews filed, against what merged (`${CLAUDE_PLUGIN_ROOT}/shared/issue-hygiene.md` §3): close the ones the change discharged, comment on the ones whose premise moved, leave the rest. An issue nobody re-reads becomes wrong without anyone changing it (#94).
 
 The unresolved items already live in the skip ledger, which resurfaces them at the next change
 touching this area. Confirm the roll-up is current rather than writing a second copy:

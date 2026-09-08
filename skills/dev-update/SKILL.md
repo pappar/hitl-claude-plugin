@@ -162,7 +162,7 @@ for m in installed_plugins.json "command -v" HITL_PY; do grep -q "$m" .hitl/hook
 
 No `installed_plugins.json` = pre-v1.0.9 discovery, broken on current Claude Code. No `command -v` probe or `HITL_PY` = pre-issue-#14: a bare `python3` is the Microsoft Store stub on Windows, on PATH but running nothing, so every hook silently no-ops — and a lone `installed_plugins.json` grep passes straight over it. No `first-pass-permissions.sh` = pre-CR-15, so the permission policy never engages. On any of those, delete `.hitl/hooks/` and re-create all **nine** wrappers (`welcome`, `hitl-gate`, `check-hitl-context`, `first-pass-permissions`, `check-domain-boundary`, `rebuild-graph`, `write-session-summary`, `sync-step-to-issue`, `statusline-hitl`) from the template in Step 0 of `/hitl:dev-start-from-prd` (**sub-steps 1-3 only**: create the wrappers, then come straight back here to Step 4.5. Ignore its closing "restart and re-run this command" instruction — that is written for onboarding, and following it here skips Steps 4.5 through 4.9 and the completion message, with no sign anything was missed), which is the single source of truth for wrapper contents.
 
-Also check `.claude/settings.json` for the `$CLAUDE_PROJECT_DIR` fix, the `statusLine` entry, and the `SessionStart` → `hitl-gate.sh` hook. Assert what `statusLine` **points at**, not merely that the key is present:
+Also check `.claude/settings.json` for the `$CLAUDE_PROJECT_DIR` fix, the `statusLine` entry, and the `SessionStart` → `hitl-gate.sh` hook. Assert what `statusLine` **points at** and what **shape** it has, not merely that the key is present. The migrator run in Step 3b reports both: it wraps a bare-string `statusLine` into the object form (#96: the v2.6.3 re-wire wrote a string, and a grep for the script name passed it for four releases) and reports a missing or re-pointed one for you to fix:
 ```bash
 grep "CLAUDE_PROJECT_DIR" .claude/settings.json
 grep -q 'hooks/statusline-hitl.sh' .claude/settings.json \
@@ -236,6 +236,7 @@ including on runs with no version change (#104). So the migrator applies the 4.7
 |---|---|
 | Shipped file the repo does **not** have | install it |
 | Shipped file, byte-identical | leave alone, say nothing |
+| Shipped file the repo has, byte-identical to an **older release** | update it; an older version is not an edit (plugin #35) |
 | Shipped file the repo has **modified** | show the diff, **keep the repo's**, and ask |
 | File the repo added itself | never touched, never reported |
 | File listed in that directory's `.hitl-optout` | never installed — a deliberate removal stays removed |

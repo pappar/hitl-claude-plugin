@@ -4,6 +4,70 @@ All notable changes to the HITL plugin are documented here.
 
 ---
 
+## [2.12.1] — 2026-09-08
+
+### Fixed
+
+- **`dev-update` now refreshes a validator copy left behind by an older release** (plugin #35). The
+  co-owned sync kept any repo copy that differed from the shipped file, on the rule that a
+  difference is the repo's edit. An older shipped version differs too, so a 2.10 review gate stayed
+  in place under a 2.12 plugin and rejected every record the 2.12 template produced as malformed.
+  The plugin now ships `shared/ci/shipped-validators.sha256`, the hash of every version of every
+  synced validator HITL has released; a repo copy that matches one is updated, a copy that matches
+  none is still kept and asked about. `/hitl:dev-verification-review` also checks the repo's gate
+  copy before running it and says, in one line, when it is an older release and what to run.
+- **Every `shared/` file a shipped skill names is in the package.** Twenty skills closed with "the
+  way `ai/shared/next-step.md` describes", a source-repo path the build never rewrote, so the
+  installed skills pointed at a file that was not there; `shared/next-step.md` ships now and the
+  build fails on a source path that survives the rewrite. The onboarding skills' pointer to a
+  `graphify-setup.md` that never existed is gone; the install command was already inline. Found by
+  the 2.12.1 upgrade review.
+- **`dev-check-conventions` runs the drift checker the way CI does, and says what it did not run**
+  (#113). It passed no flags, so an unlisted file was a warning and the exit was 0 while the same
+  checker failed the same file in CI. It now passes `--require-manifest --strict`, and its report
+  closes with the boundary: four checks ran, the project's CI did not. The description no longer
+  reads as a complete pre-PR gate.
+
+- **An interface change alone no longer activates the security design review or locks the
+  penetration test** (#108). The first change sized after 2.10.0 was a review skill and a YAML
+  schema; the schema counted as a published interface, the security question was answered no, and
+  the sizer still put both steps in the plan with the pentest as floor. The two rules now read the
+  human's answer and a data migration only. A change that touches auth, secrets or personal data
+  still gets both, because intake asks.
+- **`dev-update` repairs a string-form `statusLine`** (#96). The v2.6.3 re-wire wrote it as a bare
+  string; Claude Code wants an object, and the check was a grep for the script name, which the
+  string passes. The migrator that already runs on update wraps it, shows the change, and writes
+  it with `--apply`. A missing or re-pointed `statusLine` is reported, not rewritten.
+- **The sizer names the activator for an active conditional step.** The CVE audit's reason read
+  "applies to every change" when the only thing that put it in the plan was the security answer.
+- **Release gate: six validator gaps from the 2.8.0 review closed** (#92). A lens id loses a
+  numbering suffix only when what remains is a catalog id, and a letter suffix only behind a
+  separator, so `web` and `v2` stay themselves. `change_id` is matched regardless of case. An open
+  blocking finding in an earlier round now blocks until a record in that round or a later one lists
+  the same claim as fixed or accepted with a name (`FINDING_CARRIED`); a clean later round that
+  never mentions it is not a resolution. `--sha` on a commit that is not HEAD blocks
+  (`TARGET_NOT_HEAD`) instead of warning and exiting clean. The unparseable-record warning says what
+  it knows. The report-path instruction is the last item of the brief.
+- **Tier attribution works in both directions** (#111). Intake records the tier the analysis
+  proposed (`tier_proposed`); declaring a heavier tier over a light proposal needs `tier_set_by` and
+  `tier_reason`, the same as declaring a lighter one. Agreeing with the proposal needs nothing.
+- **Filing issues: search first, confirm batches, revisit after merge** (#94). `shared/issue-hygiene.md`
+  is the rule; the six skills that filed from review findings without a duplicate check now follow
+  it, an unattended drift check files one rollup issue at most, and the retrospective re-reads the
+  follow-ups a change's reviews filed against what merged. A wiring test holds every issue-filing
+  skill to it.
+- **Upgrading a change started before 2.9.0 no longer numbers two steps 3 or leaves the pointer
+  on the wrong step** (plugin #33). `impact` left the catalog in 2.9.0; the migrator read it as the
+  team's own step, kept it at 3, and renumbered `roi` into 3 beside it. And `current_step.number`
+  was never remapped, so a change held at the decision packet reported itself at RED. The catalog
+  now lists `retired_steps`; a retired key is dropped and reported, an unknown key is still the
+  team's own and kept. The number and phase under `current_step` follow whichever step is
+  `current` after the remap (`name` is left alone), and the number is trusted only on pre-2.x
+  files with no step lines. Two steps that would share a number abort the migration. New catalog
+  steps land where the catalog puts them (4a after 4, not after 31).
+
+---
+
 ## [2.12.0] — 2026-09-05
 
 ### Changed

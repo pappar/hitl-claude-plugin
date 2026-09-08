@@ -9,6 +9,6 @@ Do not approve Tier 3+ releases until canary criteria are specific measurable nu
 
 ## Closing this step
 
-Close it the way `ai/shared/next-step.md` describes: what finished, what is next in words that
+Close it the way `${CLAUDE_PLUGIN_ROOT}/shared/next-step.md` describes: what finished, what is next in words that
 say what it achieves, and how to start it. Read the next step and its `command` from
 `.hitl/current-change.yaml`; `manual` and `guided` are not commands and must not be rendered as one.
