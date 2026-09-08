@@ -428,7 +428,7 @@ if [[ -f "$SOURCE_DIR/ci/workflows/first-pass-check.yml" ]]; then
 fi
 
 # ── Shared prose ──────────────────────────────────────────────────────────────
-SHARED_PROSE=(challenge-stance.md verification-review.md skip-record.md personas.md plain-english.md issue-hygiene.md)
+SHARED_PROSE=(challenge-stance.md verification-review.md skip-record.md personas.md plain-english.md issue-hygiene.md next-step.md)
 echo "Syncing shared prose..."
 for prose in "${SHARED_PROSE[@]}"; do
   if [[ -f "$SOURCE_DIR/ai/shared/$prose" ]]; then
@@ -492,6 +492,8 @@ find "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" \
     -e 's|ai/claude/generate-docs/templates/|shared/templates/|g' \
     -e 's|ai/claude/dev-practices/|skills/dev-practices/|g' \
     -e 's|ai/claude/apply-change/|skills/dev-apply-change/|g' \
+    -e 's|ai/shared/first-pass/|shared/first-pass/|g' \
+    -e 's|ai/shared/agentic/|shared/agentic/|g' \
     "$f"
   # Protect paths that are deliberately built from a variable the STEP resolves at runtime.
   # dev-update resolves $ROOT and the brownfield survey resolves $PLUGIN_ROOT, because
@@ -592,9 +594,24 @@ while read -r ref; do
     echo "  MISSING  $ref" >&2
     missing=$((missing + 1))
   fi
-done < <(grep -rhoE 'shared/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+' \
-           "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" 2>/dev/null \
+done < <(grep -rhoE 'shared/[A-Za-z0-9_-]+(/[A-Za-z0-9_.-]+)*\.[A-Za-z0-9]+' \
+           "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" 2>/dev/null \
          | sed 's/[.,;:)]*$//' | sort -u || true)
+# Source-repo paths that survived the rewrite resolve nowhere in an installed plugin. 2.12.0 shipped
+# twenty skills closing with "the way ai/shared/next-step.md describes" (2.12.1 upgrade review).
+# dev-update reads a few ai/ paths on purpose, to recognise the platform repo; those are the only
+# ones allowed.
+while read -r ref; do
+  [[ -n "$ref" ]] || continue
+  [[ "$ref" == */ ]] && continue          # a directory named in prose, not a file a skill opens
+  case "$ref" in
+    ai/claude/start-change/SKILL.md|ai/claude/plugin/plugin.json|ai/shared/workflows.yaml|ai/claude/hooks/check-platform-ready.sh|ai/claude/agents/|ai/claude/ai/claude/) continue ;;
+  esac
+  echo "  SOURCE PATH  $ref" >&2
+  missing=$((missing + 1))
+done < <(grep -rhoE 'ai/(shared|claude)/[A-Za-z0-9_./-]*' \
+           "$PLUGIN_DIR/skills" "$PLUGIN_DIR/commands" "$PLUGIN_DIR/agents" 2>/dev/null \
+         | sed 's/[.,;:)`]*$//' | sort -u || true)
 if (( missing > 0 )); then
   echo "" >&2
   echo "Refusing to build: $missing shared/ path(s) named by a shipped skill are not in the" >&2
