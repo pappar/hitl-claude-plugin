@@ -341,6 +341,11 @@ if [[ -f "$SOURCE_DIR/ci/retired-tests.sha256" ]]; then
   cp "$SOURCE_DIR/ci/retired-tests.sha256" "$PLUGIN_DIR/shared/ci/retired-tests.sha256"
   echo "  shared/ci/retired-tests.sha256"
 fi
+if [[ -f "$SOURCE_DIR/ci/shipped-validators.sha256" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/ci"
+  cp "$SOURCE_DIR/ci/shipped-validators.sha256" "$PLUGIN_DIR/shared/ci/shipped-validators.sha256"
+  echo "  shared/ci/shipped-validators.sha256"
+fi
 if [[ -d "$SOURCE_DIR/tools/hitl-onboarding" ]]; then
   mkdir -p "$PLUGIN_DIR/shared/tools/hitl-onboarding"
   find "$SOURCE_DIR/tools/hitl-onboarding" -maxdepth 1 -name "*.py" ! -name "test_*" ! -name "conftest.py" | while read -r src; do
