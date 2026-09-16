@@ -79,6 +79,22 @@ echo ""
 echo "=== Step 1: Build ==="
 bash "$SCRIPT_DIR/build.sh" "${SOURCE_DIR}"
 
+# Every synced non-Python file must be in the built manifest under its BUILT hash. build.sh rewrites
+# source paths inside shared files, so the copy a product repo holds is the built form, and the
+# source repo's hashes script mirrors that rewrite by hand (2.13.0 upgrade review). If the mirror
+# and the build ever disagree, this is the only place that can notice: the source tests never see
+# the built file.
+for f in shared/workflows.yaml; do
+  h=$(shasum -a 256 "$PLUGIN_DIR/$f" | cut -d' ' -f1)
+  if ! grep -q "^$h " "$PLUGIN_DIR/shared/ci/shipped-validators.sha256"; then
+    echo "ERROR: built $f hashes $h, which is not in shared/ci/shipped-validators.sha256." >&2
+    echo "  A product repo would hold this file under a hash dev-update does not know, and the next" >&2
+    echo "  edit would read it as the repo's own. Make built_form() in the source repo's" >&2
+    echo "  tools/scripts/shipped-validators-hashes.py match build.sh, re-run it, and rebuild." >&2
+    exit 2
+  fi
+done
+
 # ── Step 2: Read version ──────────────────────────────────────────────────────
 VERSION=$(python3 -c "import json; print(json.load(open('$PLUGIN_DIR/.claude-plugin/plugin.json'))['version'])")
 echo ""

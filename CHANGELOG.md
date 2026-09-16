@@ -4,6 +4,76 @@ All notable changes to the HITL plugin are documented here.
 
 ---
 
+## [2.13.0] — 2026-09-16
+
+### Added
+
+- **The light path is called Fast Track, and intake starts from your goal** (#125). People missed
+  it because it had three names and was never mentioned where they look. The intake options are
+  Fast Track and Full Scale everywhere people read, and the CLAUDE.md block, the banner and the
+  statusline say the promise: state the goal, get the fewest steps and what was left out, say
+  "Fast Track" at any point during intake. `dev-start-change` asks for the goal first; the
+  restatement and the stub come before the workflow question. First Pass stays the internal name
+  of the skip record and its validator. Getting-started, the portal and `/hitl:help` describe the
+  2.9.0 model: 34 steps plus 4 conditional, and the full list of protected steps.
+- **Fast Track shows what it left out as checkboxes.** In a 2.12.1 session a developer had to ask
+  to see the steps before they could select or skip any, and never saw a checkbox. Step 4 now lists
+  what Fast Track leaves out every time, then asks: Fast Track, Full Scale, or pick steps yourself,
+  each with a preview of its plan. Every left-out step comes back as a checkbox you can tick back
+  in; picking steps yourself adds a leave-out screen. Protected steps are never checkboxes. One real
+  run, eleven screenshots: `docs/fast-track.md` and the portal's Fast Track page.
+- **Onboarding asks, once, whether you want a note when a new version ships** (#116). HITL is
+  maintained by one person and had no way to reach anyone. The channel is the "Who uses HITL"
+  thread in the plugin repo, https://github.com/pappar/hitl-claude-plugin/discussions/36: a
+  comment there subscribes you through GitHub's own notifications, and the maintainer posts each
+  release on it. At the end of onboarding, and once by `/hitl:dev-update` for projects onboarded
+  earlier, two questions, both default no: post one comment under your account (the comment is
+  the version number only, like `HITL 2.13.0`, shown before it is posted), and star the plugin
+  repo. The answers are kept per person in `~/.hitl/release-notice.yaml`, with no handle in it, so
+  nobody is asked twice and a teammate is still asked. With `gh` logged out the questions are
+  skipped with one line and asked next time. No is complete and never revisited; nothing is
+  posted without a yes. The closing message, and the first retrospective of a change that
+  reached done, end with one share line: the two install commands and the walkthrough link.
+  It appears in no hook, the breadcrumb or the statusline; a wiring test holds it out.
+
+### Fixed
+
+- **Fast Track certifies on an API change with nothing ticked** (#129). Baseline measurement
+  applies to any change that touches an API and is never required before shipping, so Fast Track
+  leaves it out. The sizer recorded that as "the rules excluded it", and the certification step
+  rightly refused: the record shows the step was active. The gate blocked most real changes unless
+  someone ticked Baseline back in, or recorded a decision nobody made. The sizer now lists such a
+  step under `proposed` as a deferral by the person who confirms the menu, with the reason "not
+  required before this ships". It is still an add-back box, and nothing is written until you
+  confirm. The security steps behave exactly as before.
+- **The certification step no longer takes the impact record's word for it** (#124). A record
+  written in the same PR as the change file could certify a penetration test as excluded by the
+  rules with no accountable name, in two ways. A record that did not say which change it was for
+  was never compared with the change file; it now must carry `change_id` and `workflow`, and both
+  must match (`RECORD_UNIDENTIFIED`). And what the record said the rules concluded was trusted; the
+  gate now runs the same rules on the record's own findings and blocks when a conditional step's
+  answer disagrees (`RECORD_CONTRADICTED`). Both are non-waivable. Your answers to intake's
+  questions are still yours; what may not be self-declared is what the rules made of them. A
+  conditional step the rules did exclude still needs no `ack_by`.
+- **Intake runs the impact analysis itself, every time** (#130). `dev-start-change` Step 3c told
+  the model to call `dev-apply-change`, a command the model cannot invoke, so some runs read the
+  file and ran the analysis inline and others stopped and asked you to run it, splitting intake in
+  two. Step 3c now follows apply-change's analysis steps from its file and says so. A wiring test
+  fails on any skill sentence that tells the model to call a command it cannot invoke; five other
+  sites it found now follow the skill from its file or tell you what to run.
+- **The QA skills no longer stop on a PRD that has no `FR-` entries** (#114). `qa-plan-tests`,
+  `qa-review-tests` and `qa-verify-quality` opened by stopping when `docs/01-product/prd.md` was
+  absent or had no `FR-` entries in its section 5. The second half blocked the gate on any repo
+  whose PRD predates HITL or is written in another form. An absent PRD still stops. A PRD with no
+  `FR-` entries now gets one line saying so, and the skill continues against the acceptance
+  criteria on the issue, which the packet gate approved against.
+- **`dev-generate-docs` names the real manual-copy destination** (#121). Step 3 of the repo setup
+  told a reader to copy skills to `.ai/claude/ai/claude/`, a path doubled when the source tree was
+  regrouped under `ai/`. It now says `.claude/`. The migration guide and the greenfield example
+  carried the same path and say the same now.
+
+---
+
 ## [2.12.1] — 2026-09-08
 
 ### Fixed

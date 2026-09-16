@@ -218,7 +218,7 @@ if [[ -n "$PLUGIN_ROOT" && -d "$PLUGIN_ROOT/shared/ci/first-pass" ]]; then
     mkdir -p .github/workflows
     [[ ! -f .github/workflows/first-pass-check.yml ]] && cp "$PLUGIN_ROOT/shared/ci-workflows/first-pass-check.yml" .github/workflows/
   fi
-  echo "First Pass installed: ci/first-pass/ (validator + catalog) + .github/workflows/first-pass-check.yml."
+  echo "Skip-record validator installed: ci/first-pass/ (validator + catalog) + .github/workflows/first-pass-check.yml."
 fi
 
 # Compound-agentic surface (#10): the fail-closed system-manifest validator + posture-view generator,
@@ -263,6 +263,22 @@ Update `.hitl/current-change.yaml` — set `current_step`:
   phase: "PRD Setup"
 ```
 
+**Release notice and star, once per person, default no.** HITL has no other way to tell anyone a
+new version exists. The script decides whether to ask; nothing is posted without a yes.
+
+```bash
+PLUGIN_ROOT=$(python3 -c "import json,os,sys;d=json.load(open(os.path.expanduser('~/.claude/plugins/installed_plugins.json')));[print(i['installPath']) or sys.exit(0) for i in d.get('plugins',{}).get('hitl@hitl',[]) if os.path.isfile(os.path.join(i.get('installPath',''),'.claude-plugin/plugin.json'))]" 2>/dev/null)
+RN="$PLUGIN_ROOT/shared/tools/hitl-onboarding/release_notice.py"
+if [[ -f "$RN" ]]; then python3 "$RN" state; else echo "release_notice.py is not in this build: skipping."; fi
+```
+
+The first line of the output is the verdict. On `already-answered` or `gh-logged-out`, say the
+second line to the person and move on. On `ask`, put question 1 in front of the person word for
+word and wait; then question 2 and wait. An empty answer is no. Then record both answers:
+`python3 "$RN" record --notice <yes|no> --star <yes|no|skipped>`. If the first answer was yes,
+show the output of `python3 "$RN" body` (the exact comment) and only then run
+`python3 "$RN" post --confirmed`. If the second was yes, run `python3 "$RN" star --confirmed`.
+
 Output this exactly:
 
 ---
@@ -286,6 +302,14 @@ If Graphify is not yet installed, install it now (`uv tool install graphifyy && 
 
 Come back here when the design docs exist — Step 5 stands up the platform.
 
+If HITL helped, this is what to send someone:
+
+```
+claude plugin marketplace add pappar/hitl-claude-plugin
+claude plugin install hitl@hitl
+```
+The walkthrough is at https://prasad-apparaju.github.io/hitl-dev-platform/
+
 ---
 
 ## Step 5 — Generate the platform roadmap
@@ -301,7 +325,7 @@ Governance can gate changes, but nothing exists yet to verify, deliver, or opera
 no pipeline, no environment, no dashboards. That standup work is the **platform workflow**
 (onboarded → delivery-ready), tracked in `docs/04-operations/platform-readiness.yaml`.
 
-Run `/hitl:ops-plan-platform derive` now. It reads the PRD's NFRs and the HLD deployment
+Follow `/hitl:ops-plan-platform derive` now from its file (`skills/ops-plan-platform/SKILL.md` under the plugin root). It reads the PRD's NFRs and the HLD deployment
 view from Step 4 (SLOs → observability targets; user tiers → environment story; compliance
 → security items), writes the readiness register, and then generates the roadmap issues
 (`/hitl:ops-plan-platform roadmap`). Each roadmap issue is an ordinary HITL change.

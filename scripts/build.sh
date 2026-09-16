@@ -605,7 +605,7 @@ while read -r ref; do
   [[ -n "$ref" ]] || continue
   [[ "$ref" == */ ]] && continue          # a directory named in prose, not a file a skill opens
   case "$ref" in
-    ai/claude/start-change/SKILL.md|ai/claude/plugin/plugin.json|ai/shared/workflows.yaml|ai/claude/hooks/check-platform-ready.sh|ai/claude/agents/|ai/claude/ai/claude/) continue ;;
+    ai/claude/start-change/SKILL.md|ai/claude/plugin/plugin.json|ai/shared/workflows.yaml|ai/claude/hooks/check-platform-ready.sh|ai/claude/agents/) continue ;;
   esac
   echo "  SOURCE PATH  $ref" >&2
   missing=$((missing + 1))
