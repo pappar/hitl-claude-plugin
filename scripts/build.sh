@@ -346,6 +346,15 @@ if [[ -f "$SOURCE_DIR/ci/shipped-validators.sha256" ]]; then
   cp "$SOURCE_DIR/ci/shipped-validators.sha256" "$PLUGIN_DIR/shared/ci/shipped-validators.sha256"
   echo "  shared/ci/shipped-validators.sha256"
 fi
+# Team Pulse generator (#118, FR-32). The skill resolves it at $ROOT/shared/tools/team-pulse/pulse.py.
+if [[ -d "$SOURCE_DIR/tools/team-pulse" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/tools/team-pulse"
+  find "$SOURCE_DIR/tools/team-pulse" -maxdepth 1 -name "*.py" ! -name "test_*" ! -name "conftest.py" | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/tools/team-pulse/$fname"
+    echo "  shared/tools/team-pulse/$fname"
+  done
+fi
 if [[ -d "$SOURCE_DIR/tools/hitl-onboarding" ]]; then
   mkdir -p "$PLUGIN_DIR/shared/tools/hitl-onboarding"
   find "$SOURCE_DIR/tools/hitl-onboarding" -maxdepth 1 -name "*.py" ! -name "test_*" ! -name "conftest.py" | while read -r src; do
@@ -428,7 +437,7 @@ if [[ -f "$SOURCE_DIR/ci/workflows/first-pass-check.yml" ]]; then
 fi
 
 # ── Shared prose ──────────────────────────────────────────────────────────────
-SHARED_PROSE=(challenge-stance.md verification-review.md skip-record.md personas.md plain-english.md issue-hygiene.md next-step.md)
+SHARED_PROSE=(challenge-stance.md verification-review.md skip-record.md personas.md plain-english.md issue-hygiene.md next-step.md team-pulse.md)
 echo "Syncing shared prose..."
 for prose in "${SHARED_PROSE[@]}"; do
   if [[ -f "$SOURCE_DIR/ai/shared/$prose" ]]; then

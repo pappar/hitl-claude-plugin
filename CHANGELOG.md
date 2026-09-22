@@ -4,6 +4,49 @@ All notable changes to the HITL plugin are documented here.
 
 ---
 
+## [2.14.0] — 2026-09-22
+
+### Added
+
+- **Team Pulse** (#118, FR-32): `/hitl:team-pulse` writes one page from GitHub that shows who is
+  on what, what is waiting on someone else, and who can unblock it. Per person: last activity,
+  tallies, open PRs with draft flag and idle age, latest events, one sentence. Per epic: the
+  checkbox list read as a slice tree with a state per slice, flags, one summary and one nudge. An
+  attention strip lists every epic flag, draft PRs and unreviewed PRs past the thresholds, PRs
+  merged by their author with no review, and commits not linked to a GitHub account. Hook and
+  gate comments never count as human activity. A self-reported `Hours:` line renders a milestone
+  bar on the leads page only. Two audiences, asked once: `team` (default, the same page for
+  everyone) and `leads` (adds a planning section; the team page is still written). Every number
+  and event links to its GitHub source; the notes are model-written from the collected data only
+  under a facts-only wording rule. `gh` only, no other dependency; file output under
+  `docs/04-operations/`, artifact publishing when the tool is available. Conventions in
+  `shared/team-pulse.md`, user doc with a scheduling recipe in `docs/team-pulse.md`, generator
+  `tools/team-pulse/pulse.py` with 12 tests.
+
+### Fixed
+
+- **`dev-switch-context` and `impact-brief` no longer send people to `dev-apply-change` to create a
+  branch or change file** (#136). Both moved to intake in 2.9.0; the stale advice skipped the
+  restatement, the tier proposal and the Fast Track choice, and in one session led to a change file
+  seeded by hand with the full-length plan. Both messages now name `/hitl:dev-start-change N`. A
+  wiring test fails on any skill that points at apply-change for either job. Four docs corrected.
+
+### Changed
+
+- **A skipped step is one line at the top of the issue, not a ticket each.** A user found two or
+  three new issues after every run and could not tell where they came from. They came from intake:
+  every deferred step seeded a follow-up ticket at plan confirm, behind a line that said "a thin
+  version now, marked to enhance later" and never mentioned an issue. Verification review did the
+  same on a deferred finding. Now the generator points a defer at the change's own issue
+  (`followup_ref: issue:<N>`), Step 6b writes one line between markers at the top of that issue's
+  body naming every step left out (`ci/first-pass/skipped_line.py`, regenerated from the ledger,
+  idempotent, blame-filtered), and plan confirm says "N steps left out. No issues opened." A ticket
+  is opened only when someone says "file this one". The hygiene wiring test now also catches prose
+  that files ("seed a fast-follow ticket"), which is how three skills bypassed search-first and
+  batch-confirm. Decision recorded on #112 and plugin #34. CR-7 and First Pass LLD §6.1 amended.
+
+---
+
 ## [2.13.0] — 2026-09-16
 
 ### Added

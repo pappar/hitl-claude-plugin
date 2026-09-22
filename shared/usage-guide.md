@@ -190,7 +190,7 @@ This is the 31-step workflow entry point. Paste the GitHub issue number when pro
 | Phase | Steps | Key commands |
 |---|---|---|
 | Requirements | 1–2 | GitHub issue; Figma review (if applicable) |
-| Design | 3–9 | `/hitl:dev-apply-change` → impact analysis, branch creation; `/hitl:dev-generate-docs` → HLD/LLD; `/hitl:qa-plan-tests`; architect assembles decision packet |
+| Design | 3–9 | `/hitl:dev-start-change` → intake, branch and change file; `/hitl:dev-apply-change` → impact analysis; `/hitl:dev-generate-docs` → HLD/LLD; `/hitl:qa-plan-tests`; architect assembles decision packet |
 | TA gate ✅ | — | `/hitl:ta-approve` — architect approves design before any code |
 | Build (TDD) | 10–17 | `/hitl:dev-tdd` RED → QA review → GREEN → refactor → `/hitl:dev-check-conventions` |
 | Verify | 18–22 | `/hitl:dev-review-lld-adherence` × 2; `/hitl:architect-review-code`; `/hitl:qa-verify-quality` |
@@ -365,5 +365,6 @@ This stashes uncommitted work, checks out the `issue/42-*` branch, reloads all a
 | Approve a design gate | `/hitl:ta-approve` |
 | Validate all session work | `/hitl:dev-validate` |
 | Switch to a different issue | `/hitl:dev-switch-context [issue-number]` |
+| See who is on what and what is waiting on someone | `/hitl:team-pulse` (see [team-pulse.md](team-pulse.md)) |
 | Update the plugin | `/hitl:dev-update` |
 | Find the right command | `/hitl:help [describe your situation]` |
