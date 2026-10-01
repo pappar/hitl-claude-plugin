@@ -1,6 +1,6 @@
 ---
 description: Orchestrate the TDD-as-design Red → Green → Refactor cycle where tests drive the design before implementation code exists. Use after the LLD is approved and before writing any implementation code. Requires an approved LLD — refuses to proceed without one.
-argument-hint: "[LLD path or issue number and component name]"
+argument-hint: "[LLD path or pinned reference, or change id e.g. SVC-3, and component name]"
 disable-model-invocation: true
 ---
 
@@ -24,7 +24,7 @@ Orchestrate the Red → Green → Refactor cycle where tests drive the design be
 
 **Input:** $ARGUMENTS (description of what to implement — should reference an LLD or issue)
 
-If `$ARGUMENTS` is empty, ask: "What are you implementing? Point me to the LLD or issue."
+If `$ARGUMENTS` is empty, ask: "What are you implementing? Point me to the LLD or issue." With a `change_id_prefix` in `.hitl/config.yaml` a change is named by its full id (`SVC-3`); refuse a bare number and name the form (#145).
 
 **Refusal rule — design not approved:** Read `.hitl/current-change.yaml`. If the file exists and `status` is not `implementation-approved`, stop:
 
@@ -50,7 +50,7 @@ Rules in `${CLAUDE_PLUGIN_ROOT}/shared/linked-changes.md`. A design in another r
 
 **Refusal rule — no LLD:** If no LLD path is provided or found, stop: "No LLD found. Write the LLD first using `/hitl:dev-generate-docs` — this skill generates tests FROM the spec, not without one."
 
-**Refusal rule — no decision packet:** Before generating any tests, check `.hitl/current-change.yaml` for `source_artifacts.decision_packet`. If the field is missing or the file at that path does not exist on disk, stop:
+**Refusal rule — no decision packet:** Before generating any tests, check `.hitl/current-change.yaml` for `source_artifacts.decision_packet`. Two cases pass without a local file: the ledger carries a certified skip of the packet step (`skips:` has an entry with `step: packet`, or `workflow.steps[]` shows `packet` as `skipped` or `not_applicable`), which Fast Track records at intake (#146); or the value is a pinned reference `owner/repo@<commit>:<path>` to a packet approved in another repository, which you fetch with `python3 "$LINKED" fetch <ref>` and read from the printed path. Otherwise, if the field is missing or the file at that path does not exist on disk, stop:
 
 > No decision packet found for this change.
 >
