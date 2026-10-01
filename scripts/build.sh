@@ -436,8 +436,38 @@ if [[ -f "$SOURCE_DIR/ci/workflows/first-pass-check.yml" ]]; then
   echo "  shared/ci-workflows/first-pass-check.yml"
 fi
 
+# Data layer (FR-31, #131): validator + scorecard + schema (ci/data-layer), adapters (tools/data-layer),
+# the CI template and the per-entity templates. The skill resolves them at $ROOT/shared/...
+if [[ -d "$SOURCE_DIR/ci/data-layer" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/ci/data-layer"
+  find "$SOURCE_DIR/ci/data-layer" -maxdepth 1 ! -name "test_*" ! -name "conftest.py" \( -name "*.py" -o -name "*.yaml" \) | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/ci/data-layer/$fname"
+    echo "  shared/ci/data-layer/$fname"
+  done
+fi
+if [[ -d "$SOURCE_DIR/tools/data-layer" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/tools/data-layer"
+  find "$SOURCE_DIR/tools/data-layer" -maxdepth 1 -name "*.py" ! -name "test_*" ! -name "conftest.py" | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/tools/data-layer/$fname"
+    echo "  shared/tools/data-layer/$fname"
+  done
+fi
+if [[ -f "$SOURCE_DIR/ci/workflows/data-layer-check.yml" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/ci-workflows"
+  cp "$SOURCE_DIR/ci/workflows/data-layer-check.yml" "$PLUGIN_DIR/shared/ci-workflows/data-layer-check.yml"
+  echo "  shared/ci-workflows/data-layer-check.yml"
+fi
+if [[ -d "$SOURCE_DIR/ai/shared/templates/data-layer" ]]; then
+  rm -rf "$PLUGIN_DIR/shared/templates/data-layer"
+  mkdir -p "$PLUGIN_DIR/shared/templates/data-layer"
+  cp "$SOURCE_DIR/ai/shared/templates/data-layer/"*.yaml "$PLUGIN_DIR/shared/templates/data-layer/"
+  echo "  shared/templates/data-layer/ ($(ls "$SOURCE_DIR/ai/shared/templates/data-layer" | wc -l | tr -d ' ') files)"
+fi
+
 # ── Shared prose ──────────────────────────────────────────────────────────────
-SHARED_PROSE=(challenge-stance.md verification-review.md skip-record.md personas.md plain-english.md issue-hygiene.md next-step.md team-pulse.md)
+SHARED_PROSE=(challenge-stance.md verification-review.md skip-record.md personas.md plain-english.md issue-hygiene.md next-step.md team-pulse.md data-layer.md)
 echo "Syncing shared prose..."
 for prose in "${SHARED_PROSE[@]}"; do
   if [[ -f "$SOURCE_DIR/ai/shared/$prose" ]]; then
