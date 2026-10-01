@@ -436,6 +436,15 @@ if [[ -f "$SOURCE_DIR/ci/workflows/first-pass-check.yml" ]]; then
   echo "  shared/ci-workflows/first-pass-check.yml"
 fi
 
+# Linked changes (FR-30 slice 0, #105): the partner-state checker, resolved at $ROOT/shared/ci/linked/linked.py.
+if [[ -d "$SOURCE_DIR/ci/linked" ]]; then
+  mkdir -p "$PLUGIN_DIR/shared/ci/linked"
+  find "$SOURCE_DIR/ci/linked" -maxdepth 1 -name "*.py" ! -name "test_*" ! -name "conftest.py" | while read -r src; do
+    fname="$(basename "$src")"
+    cp "$src" "$PLUGIN_DIR/shared/ci/linked/$fname"
+    echo "  shared/ci/linked/$fname"
+  done
+fi
 # Data layer (FR-31, #131): validator + scorecard + schema (ci/data-layer), adapters (tools/data-layer),
 # the CI template and the per-entity templates. The skill resolves them at $ROOT/shared/...
 if [[ -d "$SOURCE_DIR/ci/data-layer" ]]; then
@@ -467,7 +476,7 @@ if [[ -d "$SOURCE_DIR/ai/shared/templates/data-layer" ]]; then
 fi
 
 # ── Shared prose ──────────────────────────────────────────────────────────────
-SHARED_PROSE=(challenge-stance.md verification-review.md skip-record.md personas.md plain-english.md issue-hygiene.md next-step.md team-pulse.md data-layer.md)
+SHARED_PROSE=(challenge-stance.md verification-review.md skip-record.md personas.md plain-english.md issue-hygiene.md next-step.md team-pulse.md data-layer.md linked-changes.md)
 echo "Syncing shared prose..."
 for prose in "${SHARED_PROSE[@]}"; do
   if [[ -f "$SOURCE_DIR/ai/shared/$prose" ]]; then
