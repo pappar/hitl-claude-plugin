@@ -4,6 +4,37 @@ All notable changes to the HITL plugin are documented here.
 
 ---
 
+## [2.17.0] — 2026-10-04
+
+### Added
+
+- **Readable test scenarios** (FR-36, #148). Every change gets one file of test scenarios under
+  `docs/03-engineering/testing/scenarios/`, written the way a manual tester writes them: a five-sentence
+  context block, then one Given/When/Then scenario per heading with a stable ID (`SC-<change>-<nn>`),
+  the criterion it serves and who added it. `qa-plan-tests` writes the file instead of reporting
+  scenarios in chat; `dev-tdd` cites the IDs in the tests it generates, writes the file itself when
+  the test plan step was skipped, and records scenario IDs in the test registry. A new fail-closed
+  check, `ci/test-scenarios/check_scenarios.py`, proves the link both ways (every scenario has a test
+  or a recorded reason; every acceptance and integration test cites a scenario) and runs at test
+  review and again at QA verify; it is installed and kept current the same way as the First Pass
+  checker. A new skill, `/hitl:qa-scenarios`, lets anyone in any role add, change or review scenarios
+  by describing the behaviour, publish the file as a private shared page for people without a Claude
+  Code session, and pull their comments and additions back into the file. The PM review of the
+  acceptance scenarios runs alongside the build and is recorded in the change record; it never holds
+  up RED unless `.hitl/config.yaml` sets `scenario_review_gate: true`. Each role is invited once per
+  change, where they already are, and never reminded twice. The QA verify comment lists pass or fail
+  per scenario, in the scenario's words, failures first.
+
+### Upgrading
+
+- A change that passed the test plan step on 2.16.x has no scenarios file. At test review or QA
+  verify, the skill writes one from the change's tests (marked added by dev, review recorded as
+  skipped with the reason "change started before 2.17.0") and continues; nothing in flight is
+  blocked on a file that could not have existed. The new CI check runs in report-only mode on a
+  change record from before 2.17.0 that names no scenarios file, so an open pull request does not
+  go red; run test review once and the normal check applies. New changes get the file at the
+  test plan step. `/hitl:dev-update` installs and stages the validator and the CI template.
+
 ## [2.16.1] — 2026-10-01
 
 ### Fixed

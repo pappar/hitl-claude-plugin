@@ -60,7 +60,7 @@ Claude will offer this itself when you start work. Run it directly when you'd ra
 
 You don't need to know which workflow or tier is right. It asks, and it explains its reasoning.
 
-**There are 60 HITL commands. These are the ones worth knowing:**
+**There are 61 HITL commands. These are the ones worth knowing:**
 
 | Command | When |
 |---|---|
@@ -71,7 +71,7 @@ You don't need to know which workflow or tier is right. It asks, and it explains
 | `/hitl:dev-preferences` | HITL is too wordy or too terse for you |
 | `/hitl:dev-draft-for` | Writing a message for one particular person |
 
-The other 54 are for specific roles and moments. HITL invokes what it needs. Don't memorize them.
+The other 55 are for specific roles and moments. HITL invokes what it needs. Don't memorize them.
 
 ---
 
@@ -103,7 +103,7 @@ If it guesses wrong, say so. You can set the tier yourself, and HITL records tha
 
 ### 3. Pick Fast Track or Full Scale
 
-The development workflow has 34 steps across 7 phases, plus 4 that appear only when a change needs them (security design, dependency audit, penetration test, performance baseline):
+The development workflow has 31 numbered steps across 7 phases, plus 3 review substeps and 4 steps that appear only when a change needs them (performance baseline, security design, dependency audit, penetration test):
 
 ```
 Requirements → Design → Build → Verify → Assess → Ship → Post-Ship
