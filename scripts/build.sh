@@ -175,7 +175,7 @@ fi
 # Plugin layout: hooks/
 echo "Syncing hooks..."
 if [[ -d "$SOURCE_DIR/ai/claude/hooks" ]]; then
-  find "$SOURCE_DIR/ai/claude/hooks" -name "*.sh" -o -name "*.json" | while read -r src; do
+  find "$SOURCE_DIR/ai/claude/hooks" \( -name "*.sh" -o -name "*.json" -o -name "*.js" \) ! -path "*/tests/*" | while read -r src; do
     rel="${src#$SOURCE_DIR/ai/claude/hooks/}"
     dest="$PLUGIN_DIR/hooks/$rel"
     mkdir -p "$(dirname "$dest")"
