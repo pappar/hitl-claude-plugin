@@ -184,6 +184,25 @@ if [[ -d "$SOURCE_DIR/ai/claude/hooks" ]]; then
   done
 fi
 
+# ── Stale skill files ─────────────────────────────────────────────────────────
+# A reference file beside a SKILL.md that no longer exists in the source (renamed, merged) must not
+# keep shipping: the skill would point at the new name and the old file would still be read by
+# anyone who opens the directory. Compare each built skill dir with its source dir.
+echo "Sweeping stale skill files..."
+for skill_dir in "$PLUGIN_DIR"/skills/*/; do
+  name="$(basename "$skill_dir")"
+  src=""
+  for cand in "$SOURCE_DIR/ai/claude/$name" "$SOURCE_DIR/ai/claude/${name#dev-}" \
+              "$SOURCE_DIR/ai/claude/${name%%-*}/${name#*-}" "$SOURCE_DIR/ai/claude/skills/$name"; do
+    [[ -f "$cand/SKILL.md" ]] && { src="$cand"; break; }
+  done
+  [[ -n "$src" ]] || continue
+  for f in "$skill_dir"*.md; do
+    [[ -f "$f" ]] || continue
+    [[ -f "$src/$(basename "$f")" ]] || { rm -f "$f"; echo "  removed stale skills/$name/$(basename "$f")"; }
+  done
+done
+
 # ── Rewrite hooks.json paths for plugin runtime ────────────────────────────────
 # Source hooks.json uses "bash ai/claude/hooks/<name>.sh" — those paths don't
 # exist in the plugin package. Rewrite to CLAUDE_PLUGIN_ROOT-relative paths.
@@ -487,6 +506,21 @@ if [[ -d "$SOURCE_DIR/ai/shared/templates/data-layer" ]]; then
   mkdir -p "$PLUGIN_DIR/shared/templates/data-layer"
   cp "$SOURCE_DIR/ai/shared/templates/data-layer/"*.yaml "$PLUGIN_DIR/shared/templates/data-layer/"
   echo "  shared/templates/data-layer/ ($(ls "$SOURCE_DIR/ai/shared/templates/data-layer" | wc -l | tr -d ' ') files)"
+fi
+
+# ── Plugin evals (#151) ──────────────────────────────────────────────────────
+# The eval suite lives in the source repo at evals/ and is run from this plugin root with
+# `claude plugin eval . --ablation none --runs 1` at release (docs/releasing.md). Results are
+# written under evals/results/ here and never copied back.
+if [[ -d "$SOURCE_DIR/evals" ]]; then
+  echo "Syncing plugin evals..."
+  mkdir -p "$PLUGIN_DIR/evals"
+  find "$PLUGIN_DIR/evals" -mindepth 1 -maxdepth 1 ! -name results -exec rm -rf {} +
+  (cd "$SOURCE_DIR/evals" && find . -type d -name results -prune -o -type f -print) | while read -r rel; do
+    mkdir -p "$PLUGIN_DIR/evals/$(dirname "$rel")"
+    cp "$SOURCE_DIR/evals/$rel" "$PLUGIN_DIR/evals/$rel"
+    echo "  evals/${rel#./}"
+  done
 fi
 
 # ── Shared prose ──────────────────────────────────────────────────────────────
