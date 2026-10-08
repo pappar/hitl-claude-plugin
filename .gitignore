@@ -6,3 +6,7 @@ __pycache__/
 
 # plugin eval results: real runs, never committed
 evals/results/
+
+# scaffold Claude Code drops beside a mod loaded with --plugin-dir; the types dir ignores itself, the root file does not
+tsconfig.json
+.claude-plugin/types/
