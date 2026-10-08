@@ -4,6 +4,40 @@ All notable changes to the HITL plugin are documented here.
 
 ---
 
+## [2.18.0] — 2026-10-08
+
+### Added
+
+- **Skills aligned with Anthropic's skill authoring guide** (#151). The three longest skills
+  (`dev-start-change`, `dev-start-brownfield`, `dev-update`) are now a contents page plus reference
+  files beside them, with the rules that hold throughout placed before the steps, so what matters
+  survives the 5,000-token re-attach after compaction. Issue numbers and version lessons are gone
+  from skill prose (a few remain inside bash fences, where they are comments); the rules stayed,
+  the stories live in the changelog and the design docs. The four shared rules files over 100
+  lines that had no contents list now open with one. A `claude plugin eval` suite
+  under `evals/` exercises the setup gate, the prefixed-id refusal at intake, the TDD approval
+  refusal, help routing and adding a scenario by chat; it runs at release on the default model and
+  on Sonnet 5.5. A wiring test holds all of it in place.
+
+- **Breadcrumb as a band above the prompt** (FR-37, #150). On Claude Code 2.1.287 or later the
+  HITL plugin carries a small mod that draws the breadcrumb as a persistent band above the prompt,
+  with the current phase in bold, the step line and the next-step hint under it. It is off by default: set
+  `breadcrumb: band` in `.hitl/config.yaml` to draw the band and quiet the transcript ribbon, or
+  `breadcrumb: both` to have both (the right choice for a team with people in the VS Code panel or
+  on `claude -p`, where a mod cannot draw). The mod is draw-only: it handles the band's render event
+  and the turn-end event, reads two files in the project, and approves, rewrites and spawns
+  nothing; `claude plugin validate` shows exactly that, and a test in `ci/breadcrumb-mod/` fails if
+  it ever changes. The shell renderer stays the only renderer: it now writes its line to
+  `.hitl/breadcrumb.txt` (ignored by git; onboarding and `/hitl:dev-update` add the ignore line) and
+  the band draws that text, so the band and the transcript cannot disagree.
+
+### Upgrading
+
+- From 2.18.0 the breadcrumb renderer writes `.hitl/breadcrumb.txt` on every prompt and status-line
+  refresh, whether or not the band is on. A repo onboarded on 2.17.0 or earlier shows it as an
+  untracked file until the ignore line lands: run `/hitl:dev-update` once (it adds the line), or add
+  `.hitl/breadcrumb.txt` to `.gitignore` by hand. Nothing else changes until you set `breadcrumb:`.
+
 ## [2.17.0] — 2026-10-04
 
 ### Added
